@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import PIL
 import time
-from google.colab.patches import cv2_imshow
+# from google.colab.patches import cv2_imshow
 from tqdm import tqdm
 import os
 import warnings
@@ -18,11 +18,20 @@ import ultralytics
 from ultralytics import YOLO
 
 
+def show_progress(count, block_size, total_size):
+   completed = count * block_size
+   progress = completed / total_size * 100
+   print("\rDownload progress: %d%%" % (progress), end=" ")
+   
 url = 'https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
 filename = 'sam_vit_h_4b8939.pth'
-urllib.request.urlretrieve(url, filename)
 
-sam_checkpoint = "sam_vit_h_4b8939.pth"
+if os.path.isfile("sam_vit_h_4b8939.pth"):
+	print("File already exists!")
+	
+else:
+	urllib.request.urlretrieve(url, filename, reporthook=show_progress)
+	print("\nDownload complete!")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -30,6 +39,9 @@ if device.type == 'cuda':
   print('CUDA is found! Executing on %s.......'%torch.cuda.get_device_name(0))
 else:
   warnings.warn('CUDA not found! Execution may be slow......')
+
+
+sam_checkpoint = "sam_vit_h_4b8939.pth"
 
 model_type = "default"
 
@@ -120,12 +132,18 @@ def disp_mask_and_centroid(image, anns, random_color=False, disp_centroid=True):
     return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y
 
 
+print("Check if YOLO properly installed:")
 ultralytics.checks()  # Check if YOLO is installed properly
 
+directory = '/home/master_students/Atharva/SAM-ChatGPT_for_Kitchen_Tasks/Models'
+model_path = os.path.join(directory, 'yolov8n.pt')
+print(model_path)
 
-model_path = '/content/drive/MyDrive/Fluid Segmentation Drive/yolov8n.pt'
-YOLO = YOLO(model_path)  # load a pretrained YOLOv8n detection model
-
+if os.path.isfile(model_path):
+	print("File exists!")
+	YOLO = YOLO(model_path)  # load a pretrained YOLOv8n detection model
+else:
+	print("The file does not exits.")
 
 """### Process the video:"""
 
@@ -189,12 +207,13 @@ def YOLO_SAM_Centroid(frame, model, poi='', yolo_centroid=True, sam_centroid=Fal
           centroid_x, centroid_y = yolo_centX, yolo_centY
 
       elif sam_centroid:
+      	  
           start_time_sam = time.time()
-          cropped_mask = model.generate(cropped_img)
+          cropped_mask = mask_generator.generate(cropped_img)
           end_time_sam = time.time()
           print("Time elapsed SAM: {}s".format(np.abs(end_time_sam - start_time_sam)))
 
-          cropped_mask_img, centroid_x, centroid_y = disp_mask_and_centroid(cropped_img, cropped_mask, disp_centroid=cropped_centroid)
+          cropped_mask_img, centroid_x, centroid_y = disp_mask_and_centroid(cropped_img, cropped_mask)
 
           if display_mask:
             frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR)
@@ -244,10 +263,7 @@ def detect_objects(image, model, target_class='',  detect_all=False, print_class
   if len(indices[0]) != 0:  # Found a target object
       x1, y1, x2, y2 = boxes[indices[0][0]].xyxy[0].astype(int)  # Get the box coordinates of the target
 
-      cropped_image = image[y1:y2, x1:x2]
-
       return image, x1, y1, x2, y2
-      # return img, x1, y1, x2, y2
 
   else:
       return image, 0, 0, 0, 0
@@ -255,13 +271,13 @@ def detect_objects(image, model, target_class='',  detect_all=False, print_class
 
 if __name__ == '__main__':
     # Load the video
-    video_path = # Load the appropriate video path #'/content/drive/MyDrive/Fluid Semantic Drive/META [Segment Anything]/Videos/cam_1_video.mp4'
+    video_path = '/home/master_students/Atharva/SAM-ChatGPT_for_Kitchen_Tasks/Videos/cam_1_video.mp4' # Load the appropriate video path 
     video = cv2.VideoCapture(video_path)
 
     ## Flags
     yolo_all = False  #TODO
 
-    output_path = # Load the appropriate video path #'/content/drive/MyDrive/Fluid Semantic Drive/META [Segment Anything]/YOLO_Detection/yolo_apple_centroid_cam_1_video.mp4'
+    output_path = '/home/master_students/Atharva/yolo_centroid_cam_1.mp4'  # Load the appropriate video path 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_video = cv2.VideoWriter(output_path, fourcc, 30.0, (int(video.get(3)), int(video.get(4))))
 
@@ -284,4 +300,14 @@ if __name__ == '__main__':
     output_video.release()
     cv2.destroyAllWindows()
 
+    print("Starting file removal...")
+    try:
+    	os.remove("sam_vit_h_4b8939.pth")
+    	print("File removal complete!")
+    	
+    except FileNotFoundError:
+    	print("File not found.")
+    except Exception as e:
+    	print("An error occured while removing the file: ", e)
+    
 
