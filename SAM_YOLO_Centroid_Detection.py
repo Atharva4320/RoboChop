@@ -1,7 +1,6 @@
 import torch
 import warnings
 import sys
-import torch
 import torchvision
 import cv2
 import matplotlib.pyplot as plt
@@ -9,7 +8,6 @@ import numpy as np
 import PIL
 import time
 import os
-import warnings
 import urllib.request
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 import ultralytics
@@ -36,9 +34,9 @@ def show_progress(count, block_size, total_size):
     None
         This function doesn't return anything. It just prints the current progress of the download operation.
     """
-   completed = count * block_size
-   progress = completed / total_size * 100
-   print("\rDownload progress: %d%%" % (progress), end=" ")
+    completed = count * block_size
+    progress = completed / total_size * 100
+    print("\rDownload progress: %d%%" % (progress), end=" ")
    
 
 
@@ -58,13 +56,13 @@ def get_centroid(mask_segmentation):
     tuple
         The x and y coordinates of the object's centroid.
     """
-  binary_mask = mask_segmentation.astype(np.uint8)
+    binary_mask = mask_segmentation.astype(np.uint8)
 
-  y, x = np.indices(binary_mask.shape)
-  centroid_x = int(np.sum(x * binary_mask) / np.sum(binary_mask))
-  centroid_y = int(np.sum(y * binary_mask) / np.sum(binary_mask))
+    y, x = np.indices(binary_mask.shape)
+    centroid_x = int(np.sum(x * binary_mask) / np.sum(binary_mask))
+    centroid_y = int(np.sum(y * binary_mask) / np.sum(binary_mask))
 
-  return centroid_x, centroid_y
+    return centroid_x, centroid_y
   
 
 def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
@@ -89,18 +87,36 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
         - cent_y (int): The y-coordinate of the centroid.
 
     """
+    print("HERE!")
+    #cv2.imshow('image', image)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    
+
     if len(anns) == 0: return
     
     # Compute the centroid of the largest mask
-    cent_x, cent_y = get_centroid(sorted(anns, key=lambda x: x['area'], reverse=True)[0]['segmentation'])
+    poi_mask = sorted(anns, key=lambda x: x['area'], reverse=True)[0]['segmentation']
+    cent_x, cent_y = get_centroid(poi_mask)
+    
+    print("Cx, Cy: {}, {}".format(cent_x, cent_y))
+    
+    poi_mask = (poi_mask * 255).astype(np.uint8)
     
     # Convert the mask to uint8 and find contours
-    contours, _ = cv2.findContours((sorted_masks[0]['segmentation'] * 255).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(poi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    print("Cx, Cy: {}, {}".format(cent_x, cent_y))
     
     # Create a filled colored mask and apply it to the image
     color = (255, 165, 0) if not random_color else tuple(np.random.randint(0, 255, 3).tolist())
-    mask_overlay = cv2.drawContours(np.zeros(image.shape, dtype=np.uint8), contours, -1, color, thickness=cv2.FILLED)
+    
+    # Create an empty mask of zeros with the same shape as image
+    mask_overlay = np.zeros(image.shape, dtype=np.uint8)
+    
+    cv2.drawContours(mask_overlay, contours, -1, color, thickness=cv2.FILLED)
     img = cv2.bitwise_and(image, mask_overlay)
+    
     
     if disp_centroid:
         # Display centroid position on image
@@ -109,13 +125,18 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
     
     # Invert image and create mask from white pixels
     img_ = cv2.bitwise_not(img)
-    mask = cv2.threshold(cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY), 254, 255, cv2.THRESH_BINARY_INV)[1]
+    _, mask = cv2.threshold(cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY), 254, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
     
     # Combine the masked foreground and the background
     output_img = cv2.add(cv2.bitwise_and(img_, mask), cv2.bitwise_and(image, cv2.bitwise_not(mask)))
+    #cv2.imshow('output_img', output_img)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
     
+    print("Cx, Cy 3: {}, {}".format(cent_x, cent_y))
     return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y
+
 
 
 
@@ -219,6 +240,7 @@ def calculate_centroid(frame, model, poi='', yolo_centroid=False, sam_centroid=F
         If return_frame is True, returns the frame with centroids and the centroids' coordinates.
         Otherwise, returns only the centroids' coordinates.
     """
+    centroid_x, centroid_y = 0, 0
     # Detect objects in frame
     if yolo_all or poi == '':
         frame, x1, y1, x2, y2 = handle_yolo_all(frame, model, yolo_all, poi, return_frame)
@@ -235,8 +257,15 @@ def calculate_centroid(frame, model, poi='', yolo_centroid=False, sam_centroid=F
     elif sam_centroid:
         try:
             frame, centroid_x, centroid_y = calculate_sam_centroid(frame, SAM, x1, y1, x2, y2, display_mask)
+            #cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
+            #cv2.waitKey(0)
+            #cv2.destroyAllWindows()
         except Exception:
             print("SAM model is not loaded properly. Please make sure that SAM is properly loaded.")
+            
+    #cv2.imshow('frame 3: ({}, {})'.format(centroid_x, centroid_y), frame)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
     return frame, centroid_x, centroid_y if return_frame else centroid_x, centroid_y
 
@@ -295,7 +324,10 @@ def handle_zero_coordinates(frame, return_frame):
         Otherwise, returns only zero coordinates.
     """
     # This function handles the condition where x1 is zero
-    return (frame, 0, 0) if return_frame else (0, 0)
+    if return_frame:
+    	return frame, 0, 0  
+    else:
+    	return 0, 0
 
 
 
@@ -334,7 +366,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
 
 def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
     """
-    This function calculates the centroid using SAM (Sharpness-Aware Minimization for Efficiently Improving Generalization)
+    This function calculates the centroid using SAM 
     and draws it on the given frame. It also has an option to display the generated mask.
 
     Parameters:
@@ -368,12 +400,26 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
     # This function calculates the centroid using sam method
 
     cropped_img = frame[y1:y2, x1:x2]
+    start_time_sam = time.time()
     cropped_mask = mask_generator.generate(cropped_img)
-    cropped_mask_img, centroid_x, centroid_y = generate_SAM_centroid(cropped_img, cropped_mask)
+    end_time_sam = time.time()
+    print("Time elapsed SAM: {}s".format(np.abs(end_time_sam - start_time_sam)))
+    cropped_mask_img, cent_x, cent_y = generate_SAM_centroid(cropped_img, cropped_mask)
+    #cv2.imshow('output_img', cropped_mask_img)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    
+    #print("Cx, Cy 4: {}, {}".format(cent_x, cent_y))
     if display_mask:
         frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR)
-    sam_centX, sam_centY = centroid_x + x1, centroid_y + y1
+    sam_centX, sam_centY = cent_x + x1, cent_y + y1
+    #print("SAM Cx, Cy: {}, {}".format(sam_centX, sam_centY))
     frame = draw_circle_centroid(frame, sam_centX, sam_centY, (0, 0, 255))
+    
+    #cv2.imshow('frame', frame)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    
     return frame, sam_centX, sam_centY
 
 
@@ -405,8 +451,10 @@ def draw_cross_centroid(frame, centX, centY, color):
     line_length, thickness = 5, 2
     cv2.line(frame, (centX - line_length, centY - line_length), (centX + line_length, centY + line_length), color, thickness)
     cv2.line(frame, (centX + line_length, centY - line_length), (centX - line_length, centY + line_length), color, thickness)
-    font, size = cv2.FONT_HERSHEY_SIMPLEX, 0.75
+    font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
     coordinates_text = f"({centX}, {centY})"
+    #print("HERE")
+    #print(coordinates_text)
     cv2.putText(frame, coordinates_text, (centX - 50, centY - 50), font, size, color, thickness)
     return frame
 
@@ -436,8 +484,9 @@ def draw_circle_centroid(frame, centX, centY, color):
         The frame with the drawn centroid.
     """
     # This function draws circle centroid on the frame
+    #print("SAM Segmentation Centroid: x={}, y={}\n".format(centX, centY))
     cv2.circle(frame, (centX, centY), radius=5, color=color, thickness=cv2.FILLED)
-    font, size = cv2.FONT_HERSHEY_SIMPLEX, 0.75
+    font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
     coordinates_text = f"({centX}, {centY})"
     cv2.putText(frame, coordinates_text, (centX - 50, centY - 10), font, size, color, thickness)
     return frame
@@ -446,16 +495,26 @@ def draw_circle_centroid(frame, centX, centY, color):
 
 if __name__ == '__main__':
 
-    #============= Loading the SAM Model =======================
-    url = 'https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
-    filename = 'sam_vit_h_4b8939.pth'
+    #============= Checking for cuda =======================
+    print("Checking for cuda...")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model_path_SAM = os.path.join('Models', 'sam_vit_l_0b3195.pth')
+    if device.type == 'cuda':
+      print('CUDA is found! Executing on %s.......'%torch.cuda.get_device_name(0))
+    else:
+      warnings.warn('CUDA not found! Execution may be slow......')
+    
+    
+    #============= Loading the SAM Model =======================
+#    url = 'https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
+#    filename = 'sam_vit_h_4b8939.pth'
+
+    model_path_SAM = os.path.join('Models', 'sam_vit_b_01ec64.pth')
     print(model_path_SAM)
     
     if os.path.isfile(model_path_SAM):
         print("SAM model file exists!")
-        model_type = "default"
+        model_type = "vit_b"
 
         sam = sam_model_registry[model_type](checkpoint=model_path_SAM)
         sam.to(device=device)
@@ -484,16 +543,9 @@ if __name__ == '__main__':
     if os.path.isfile(model_path_YOLO):
         print("YOLO model file exists!")
         YOLO = YOLO(model_path_YOLO)  # load a pretrained YOLOv8n detection model
+        YOLO.to(device=device)
     else:
         print("The file does not exits.")
-    
-    #============= Checking for cuda =======================
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    if device.type == 'cuda':
-      print('CUDA is found! Executing on %s.......'%torch.cuda.get_device_name(0))
-    else:
-      warnings.warn('CUDA not found! Execution may be slow......')
     
 
     # Load the video
@@ -501,9 +553,9 @@ if __name__ == '__main__':
     video = cv2.VideoCapture(video_path)
 
     ## Flags
-    yolo_all = False  #Toggle if you want to see all the detected objects or not
+    yolo_all = True  #Toggle if you want to see all the detected objects or not
 
-    output_path = '/home/master_students/Atharva/sam_centroid_cam_1.mp4'  # Load the appropriate video path
+    output_path = '/home/master_students/Atharva/yolo_all_cam_1.mp4'  # Load the appropriate video path
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_video = cv2.VideoWriter(output_path, fourcc, 30.0, (int(video.get(3)), int(video.get(4))))
 
@@ -517,12 +569,16 @@ if __name__ == '__main__':
         if not ret:
             break
         
-        if frame_counter >= 100:
-            break
-        result_frame, c_x, c_y = calculate_centroid(frame, YOLO, poi='apple', sam_centroid=True, yolo_all=yolo_all)
-        print(f"Object Centroid: ({c_x}, {c_y})") if c_x != 0 else None
-        cv2.imshow(result_frame) if c_x != 0 else None
-        output_video.write(result_frame)
+        #if frame_counter >= 100:
+        #    break
+        results = calculate_centroid(frame, YOLO, poi='apple', yolo_centroid=True, yolo_all=yolo_all)
+        print(f"Object Centroid: ({results[1]}, {results[2]})") if results[1] != 0 else None
+        if results[1] != 0 and frame_counter <= 50:
+        	cv2.imshow("Final frame: ({}, {})".format(results[1], results[2]), results[0])
+        	cv2.waitKey(500)
+        	cv2.destroyAllWindows()
+        print("Frame: ", frame_counter)
+        output_video.write(results[0])
         frame_counter += 1
 
     print("Process Finished!!!")
@@ -530,14 +586,5 @@ if __name__ == '__main__':
     output_video.release()
     cv2.destroyAllWindows()
 
-#    print("Starting file removal...")
-#    try:
-#    	os.remove("sam_vit_h_4b8939.pth")
-#    	print("File removal complete!")
-#
-#    except FileNotFoundError:
-#    	print("File not found.")
-#    except Exception as e:
-#    	print("An error occured while removing the file: ", e)
-    
+  
 
