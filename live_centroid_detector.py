@@ -19,10 +19,12 @@ W = 848
 H = 480
 
 if __name__ == '__main__':
+
    pipeline = rs.pipeline()
    config = rs.config()
    
    pipeline_wrapper = rs.pipeline_wrapper(pipeline)
+   print('Pipeline wrapper: ', pipeline_wrapper)
    pipeline_profile = config.resolve(pipeline_wrapper)
    device = pipeline_profile.get_device()
    device_product_line = str(device.get_info(rs.camera_info.product_line))

@@ -184,23 +184,30 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
     # If detect_all flag is not set, proceed with finding the target_class
     result = results[0]
     
-    # If detect_all flag is set to True, plot all detected objects on the image and return
+    boxes_list = []
+    
+    # If detect_all flag is set to True, plot all detected objects on the image and returns the image
     if detect_all:
         img = result.plot()
-        return img, 0, 0, 0, 0
+        return img, boxes_list
 
     boxes = result.boxes.cpu().numpy()  # Extract bounding box coordinates and convert them to numpy array
     names = np.array([result.names[i] for i in boxes.cls])  # Extract class names for detected objects
 
     # Find indices of the detected objects that match the target_class
     indices = np.where(names == target_class)  # Search for target object
-
+    print("Indices: ", indices[0], len(indices[0]))
+     
     # If target_class is found in the detected objects, extract its bounding box coordinates
     if len(indices[0]) != 0:  # Found a target object
-        x1, y1, x2, y2 = boxes[indices[0][0]].xyxy[0].astype(int)  # Get the box coordinates of the target
-        return image, x1, y1, x2, y2
-    else:  # If target_class is not found, return the original image and four zeros
-        return image, 0, 0, 0, 0
+    	for i in range(len(indices[0])):
+    		box = boxes[indices[0][i]].xyxy[0].astype(int)  # Get the box coordinates of the target
+    		boxes_list.append(box)
+    	print("Box Coordinates: \n", boxes_list)
+    	#x1, y1, x2, y2 = boxes[indices[0][0]].xyxy[0].astype(int)  # Get the box coordinates of the target
+    	return image, boxes_list
+    else:  # If target_class is not found, return the original image and empty list
+    	return image, boxes_list
 
    
 
@@ -241,37 +248,45 @@ def calculate_centroid(frame, model, poi='', yolo_centroid=False, sam_centroid=F
         Otherwise, returns only the centroids' coordinates.
     """
     centroid_x, centroid_y = 0, 0
+    
     # Detect objects in frame
-    if yolo_all or poi == '':
-        frame, x1, y1, x2, y2 = handle_yolo_all(frame, model, yolo_all, poi, return_frame)
+    
+    if yolo_all or poi == '':  # If you want to detect all objects within the frame
+        frame = handle_yolo_all(frame, model, yolo_all, poi)
+        return frame
     else:
-        frame, x1, y1, x2, y2 = detect_objects(frame, model, target_class=poi)
+        frame, box_coord = detect_objects(frame, model, target_class=poi)
 
     # Handle zero coordinates
-    if x1 == 0:
+    if len(box_coord) == 0:
         return handle_zero_coordinates(frame, return_frame)
-
+    
+    cent_list = []
     # Calculate centroid based on the method selected
     if yolo_centroid:
-        frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, x1, y1, x2, y2)
+    	for bc in box_coord:
+    	    frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, bc[0], bc[1], bc[2], bc[3])
+    	    print("Centroid for {} cent x: {}, cent_y: {}".format(bc, centroid_x, centroid_y))
+    	    cent_list.append([centroid_x, centroid_y])
+    	print(cent_list)
+    	return frame, cent_list if return_frame else cent_list
+    	    
     elif sam_centroid:
-        try:
+        for bc in box_coord:
             frame, centroid_x, centroid_y = calculate_sam_centroid(frame, SAM, x1, y1, x2, y2, display_mask)
+            cent_X_list.append(centroid_x), cent_Y_list.append(centrtoid_y)
+        
+        return frame, centroid_x, centroid_y if return_frame else centroid_x, centroid_y
             #cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
             #cv2.waitKey(0)
-            #cv2.destroyAllWindows()
-        except Exception:
-            print("SAM model is not loaded properly. Please make sure that SAM is properly loaded.")
-            
+            #cv2.destroyAllWindows()  
     #cv2.imshow('frame 3: ({}, {})'.format(centroid_x, centroid_y), frame)
     #cv2.waitKey(0)
     #cv2.destroyAllWindows()
 
-    return frame, centroid_x, centroid_y if return_frame else centroid_x, centroid_y
 
 
-
-def handle_yolo_all(frame, model, yolo_all, poi, return_frame):
+def handle_yolo_all(frame, model, yolo_all, poi):
     """
     This function handles the 'yolo_all' condition during object detection.
 
@@ -289,19 +304,16 @@ def handle_yolo_all(frame, model, yolo_all, poi, return_frame):
     poi : str
         Point of Interest.
         
-    return_frame : bool
-        If True, returns the frame along with coordinates.
-
     Returns:
     -------
     tuple
         The frame and coordinates of the detected object.
     """
     # This function handles yolo_all condition
-    frame, x1, y1, x2, y2 = detect_objects(frame, model, detect_all=yolo_all)
+    yolo_img, _ = detect_objects(frame, model, detect_all=yolo_all)
     if poi == '':
         warnings.warn("Warning! No point-of-interest object mentioned in 'poi' field. Returning bounding boxes of all items.")
-    return frame, x1, y1, x2, y2
+    return yolo_img
 
 
 
@@ -323,7 +335,7 @@ def handle_zero_coordinates(frame, return_frame):
         If return_frame is True, returns the frame and zero coordinates.
         Otherwise, returns only zero coordinates.
     """
-    # This function handles the condition where x1 is zero
+    # This function handles the condition when there are no box coordinates
     if return_frame:
     	return frame, 0, 0  
     else:
@@ -509,6 +521,7 @@ if __name__ == '__main__':
 #    url = 'https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
 #    filename = 'sam_vit_h_4b8939.pth'
 
+
     model_path_SAM = os.path.join('Models', 'sam_vit_b_01ec64.pth')
     print(model_path_SAM)
     
@@ -521,7 +534,7 @@ if __name__ == '__main__':
 
         SAM = SamAutomaticMaskGenerator(sam)
     else:
-        print("The file does not exits.")
+        warnings.warn("The file does not exits.")
         
 #    if os.path.isfile("sam_vit_h_4b8939.pth"):
 #        print("File already exists!")
@@ -536,7 +549,7 @@ if __name__ == '__main__':
     print("Check if YOLO properly installed:")
     ultralytics.checks()  # Check if YOLO is installed properly
 
-    directory = '/home/master_students/Atharva/SAM-ChatGPT_for_Kitchen_Tasks/Models'
+    # directory = '/home/master_students/Atharva/SAM-ChatGPT_for_Kitchen_Tasks/Models'
     model_path_YOLO = os.path.join('Models', 'yolov8n.pt')
     print(model_path_YOLO)
 
@@ -545,17 +558,23 @@ if __name__ == '__main__':
         YOLO = YOLO(model_path_YOLO)  # load a pretrained YOLOv8n detection model
         YOLO.to(device=device)
     else:
-        print("The file does not exits.")
+        warnings.warn("The file does not exits.")
     
 
     # Load the video
-    video_path = '/home/master_students/Atharva/SAM-ChatGPT_for_Kitchen_Tasks/Videos/cam_1_video.mp4' # Load the appropriate video path 
-    video = cv2.VideoCapture(video_path)
+    video_name = 'apple_cutting.mp4'
+    video_path = os.path.join('Videos', video_name) # Load the appropriate video path 
+    if os.path.isfile(video_path):
+        print("Video file exists!")
+        video = cv2.VideoCapture(video_path)
+    else:
+        warnings.warn("The file does not exits.")
+    
 
     ## Flags
     yolo_all = True  #Toggle if you want to see all the detected objects or not
 
-    output_path = '/home/master_students/Atharva/yolo_all_cam_1.mp4'  # Load the appropriate video path
+    output_path = os.path.join('Videos/Test Videos', 'yolo_all_' + video_name)  # Load the appropriate video path
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_video = cv2.VideoWriter(output_path, fourcc, 30.0, (int(video.get(3)), int(video.get(4))))
 
@@ -572,16 +591,29 @@ if __name__ == '__main__':
         #if frame_counter >= 100:
         #    break
         results = calculate_centroid(frame, YOLO, poi='apple', yolo_centroid=True, yolo_all=yolo_all)
-        print(f"Object Centroid: ({results[1]}, {results[2]})") if results[1] != 0 else None
-        if results[1] != 0 and frame_counter <= 50:
-        	cv2.imshow("Final frame: ({}, {})".format(results[1], results[2]), results[0])
-        	cv2.waitKey(500)
-        	cv2.destroyAllWindows()
-        print("Frame: ", frame_counter)
-        output_video.write(results[0])
+        if not yolo_all:
+            print("Results[1]", results[1])
+            if results[1] == 0:
+                pass
+            else:
+                if len(results[1]) != 0 and (frame_counter <= 50 or len(results[1]) >= 2):
+                    cv2.imshow("Final frame", results[0])
+                    cv2.waitKey(500)
+                    cv2.destroyAllWindows()
+                #print(len(results[1]))    
+            #print(f"Object Centroid: ({results[1]}, {results[2]})") if results[1] != 0 else None
+            #if len(results[1]) != 0 and (frame_counter <= 50 or len(results[1]) >= 2):
+        	    #cv2.imshow("Final frame", results[0])
+        	    #cv2.waitKey(500)
+        	    #cv2.destroyAllWindows()
+            # print("Frame: ", frame_counter)
+            output_video.write(results[0])
+        else:
+            output_video.write(results)
         frame_counter += 1
 
     print("Process Finished!!!")
+    print(f"Output video saved at: {output_path}")
     video.release()
     output_video.release()
     cv2.destroyAllWindows()
