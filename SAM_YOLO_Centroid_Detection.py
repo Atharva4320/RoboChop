@@ -576,7 +576,7 @@ if __name__ == '__main__':
         # Break the loop if the video ends
         if not ret:
             break
-        result_frame, centroid_list = calculate_centroid(frame, YOLO, SAM, poi='apple', sam_centroid=True, yolo_all=False)
+        result_frame, centroid_list = calculate_centroid(frame, YOLO, SAM, poi='apple', sam_centroid=True, yolo_all=False, display_mask=True)
         # cv2.imshow(f'Centroid Detection', results)
         if len(centroid_list) == 0:
             pass
