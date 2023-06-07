@@ -562,7 +562,8 @@ if __name__ == '__main__':
     ## Flags
     yolo_all = False  #Toggle if you want to see all the detected objects or not
 
-    output_path = os.path.join('Videos/Test Videos', 'sam_live_centroid_video.mp4')  # Load the appropriate video path
+    # Specifying output video file:
+    output_path = os.path.join('Videos/Test Videos', 'sam_mask_live_centroid_video.mp4')  # Load the appropriate video path
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_video = cv2.VideoWriter(output_path, fourcc, 30.0, (int(video.get(3)), int(video.get(4))))
 
