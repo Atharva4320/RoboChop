@@ -4,7 +4,7 @@ import warnings
 import cv2
 import numpy as np
 import pyrealsense2 as rs
-from SAM_YOLO_Centroid_Detection import calculate_centroid
+from SAM_YOLO_Centroid_Detection import *
 import ultralytics
 from ultralytics import YOLO
 
@@ -42,12 +42,12 @@ if __name__ == '__main__':
 
 
    # Create a window to display the video
-   cv2.namedWindow('Video Stream', cv2.WINDOW_AUTOSIZE)
+   #cv2.namedWindow('Video Stream', cv2.WINDOW_AUTOSIZE)
 
    # Define the codec and create a VideoWriter object
    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-   output_path = os.path.join(os.path.expanduser('~'), 'yolo_all_cam_1_video.mp4')
-   output_path_og = os.path.join(os.path.expanduser('~'), 'cam_1_video.mp4')
+   output_path = os.path.join('Videos/Test Videos', 'yolo_live_centroid_video.mp4')
+   output_path_og = os.path.join('Videos/Test Videos', 'cam_1_og_video.mp4')
    out = cv2.VideoWriter(output_path, fourcc, 30, (W, H))
    out_og = cv2.VideoWriter(output_path_og, fourcc, 30, (W, H))
 
@@ -61,6 +61,36 @@ if __name__ == '__main__':
        print('CUDA is found! Executing on %s.......'%torch.cuda.get_device_name(0))
    else:
        warnings.warn('CUDA not found! Execution may be slow......')
+       
+   #============= Loading the SAM Model =======================
+   model_path_SAM = os.path.join('Models', 'sam_vit_h_4b8939.pth')
+   print(model_path_SAM)
+    
+   if os.path.isfile(model_path_SAM):
+       print("SAM model file exists!")
+       model_type = "default"
+
+       sam = sam_model_registry[model_type](checkpoint=model_path_SAM)
+       sam.to(device=device)
+
+       SAM = SamAutomaticMaskGenerator(sam)
+   else:
+       warnings.warn("The file does not exits.")
+  
+#    url = 'https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
+#    filename = 'sam_vit_h_4b8939.pth'
+
+    # Make sure the file is present in the 'Models/' folder
+        
+#    if os.path.isfile("sam_vit_h_4b8939.pth"):
+#        print("File already exists!")
+#
+#    else:
+#        urllib.request.urlretrieve(url, filename, reporthook=show_progress)
+#        print("\nDownload complete!")
+        
+#    sam_checkpoint = "sam_vit_h_4b8939.pth"
+    
     
    #============= Loading the YOLO Model =======================
    model_path_YOLO = os.path.join('Models', 'yolov8n.pt')
@@ -75,21 +105,38 @@ if __name__ == '__main__':
        print("The file does not exits.")
 
    ## EXECUTION:
-   while True:
+   duration = 90 
+   count = 0
+   while True :
        # Get the frames
        frames = pipeline.wait_for_frames()
        frames = aligned_stream.process(frames)
        color_frame = frames.get_color_frame()
        color_image = np.asanyarray(color_frame.get_data())
-
+       
+       # cv2.imshow("Original Frame", color_image)  # Display original frame (for debugging)
+       
+       
        # Write the color frame to the video file
        out_og.write(color_image)
 
-       results = calculate_centroid(color_image, YOLO, poi='apple', yolo_all=True)
-       print(f"Object Centroid: ({results[1]}, {results[2]})") if results[1] != 0 else None
+       result_frame, centroid_list = calculate_centroid(color_image, YOLO, SAM, poi='apple', yolo_centroid=True, yolo_all=False)
+       # cv2.imshow(f'Centroid Detection', results)
+       if len(centroid_list) == 0:
+           pass
+       else:
+           print("Centroid List: " , centroid_list)
+           cv2.imshow("Final frame", result_frame)
+       out.write(result_frame)
+       
+       # if results != None:
+       
+       #print(results[1])
+       #out.write(results[0])
+       #cv2.imshow(f'Centroid Detection', results[0])
         
        # Write the color frame to the video file
-       out.write(results[0])
+       # out.write(results[0])
         
        # if results[1] != 0 and frame_counter <= 50:
        #     cv2.imshow("Final frame: ({}, {})".format(results[1], results[2]), results[0])
@@ -97,12 +144,13 @@ if __name__ == '__main__':
        #     cv2.destroyAllWindows()
        # print("Frame: ", frame_counter)
        # Display the color frame
-       cv2.imshow(f'Centroid Detection @ ({results[1]}, {results[2]})', results[0])
+       # cv2.imshow(f'Centroid Detection', results[0])
         
-       # Break the loop on 'q' key press
-       if cv2.waitKey(1) & 0xFF == ord('q'):
-           break
-
+       # Press 'q' to break the loop
+       if cv2.waitKey(1) & 0xFF == ord('q'): 
+            break
+       count += 1
+       
    # Release resources and close the window
    out.release()
    out_og.release()
