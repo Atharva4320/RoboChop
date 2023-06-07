@@ -8,7 +8,6 @@ import numpy as np
 import PIL
 import time
 import os
-import urllib.request
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 import ultralytics
 from ultralytics import YOLO
@@ -211,7 +210,7 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 
    
 
-def calculate_centroid(frame, model, poi='', yolo_centroid=False, sam_centroid=False, return_frame=True, display_mask=False, yolo_all=False):
+def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False, sam_centroid=False, return_frame=True, display_mask=False, yolo_all=False):
     """
     This function calculates the centroid of detected objects in the given frame.
 
@@ -252,10 +251,10 @@ def calculate_centroid(frame, model, poi='', yolo_centroid=False, sam_centroid=F
     # Detect objects in frame
     
     if yolo_all or poi == '':  # If you want to detect all objects within the frame
-        frame = handle_yolo_all(frame, model, yolo_all, poi)
-        return frame
+        frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
+        return frame, []
     else:
-        frame, box_coord = detect_objects(frame, model, target_class=poi)
+        frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
 
     # Handle zero coordinates
     if len(box_coord) == 0:
@@ -273,10 +272,10 @@ def calculate_centroid(frame, model, poi='', yolo_centroid=False, sam_centroid=F
     	    
     elif sam_centroid:
         for bc in box_coord:
-            frame, centroid_x, centroid_y = calculate_sam_centroid(frame, SAM, x1, y1, x2, y2, display_mask)
-            cent_X_list.append(centroid_x), cent_Y_list.append(centrtoid_y)
+            frame, centroid_x, centroid_y = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+            cent_list.append([centroid_x, centroid_y])
         
-        return frame, centroid_x, centroid_y if return_frame else centroid_x, centroid_y
+        return frame, cent_list if return_frame else cent_list
             #cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
             #cv2.waitKey(0)
             #cv2.destroyAllWindows()  
@@ -337,9 +336,9 @@ def handle_zero_coordinates(frame, return_frame):
     """
     # This function handles the condition when there are no box coordinates
     if return_frame:
-    	return frame, 0, 0  
+    	return frame, []  
     else:
-    	return 0, 0
+    	return []
 
 
 
@@ -521,13 +520,13 @@ if __name__ == '__main__':
 #    url = 'https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
 #    filename = 'sam_vit_h_4b8939.pth'
 
-
-    model_path_SAM = os.path.join('Models', 'sam_vit_b_01ec64.pth')
+    # Make sure the file is present in the 'Models/' folder
+    model_path_SAM = os.path.join('Models', 'sam_vit_h_4b8939.pth')
     print(model_path_SAM)
     
     if os.path.isfile(model_path_SAM):
         print("SAM model file exists!")
-        model_type = "vit_b"
+        model_type = "default"
 
         sam = sam_model_registry[model_type](checkpoint=model_path_SAM)
         sam.to(device=device)
@@ -584,13 +583,12 @@ if __name__ == '__main__':
     frame_counter = 0
     while video.isOpened():
         ret, frame = video.read()
+        
         # Break the loop if the video ends
         if not ret:
             break
-        
-        #if frame_counter >= 100:
-        #    break
-        results = calculate_centroid(frame, YOLO, poi='apple', yolo_centroid=True, yolo_all=yolo_all)
+
+        results = calculate_centroid(frame, YOLO, SAM, poi='apple', yolo_centroid=True, yolo_all=yolo_all)
         if not yolo_all:
             print("Results[1]", results[1])
             if results[1] == 0:
@@ -600,13 +598,7 @@ if __name__ == '__main__':
                     cv2.imshow("Final frame", results[0])
                     cv2.waitKey(500)
                     cv2.destroyAllWindows()
-                #print(len(results[1]))    
-            #print(f"Object Centroid: ({results[1]}, {results[2]})") if results[1] != 0 else None
-            #if len(results[1]) != 0 and (frame_counter <= 50 or len(results[1]) >= 2):
-        	    #cv2.imshow("Final frame", results[0])
-        	    #cv2.waitKey(500)
-        	    #cv2.destroyAllWindows()
-            # print("Frame: ", frame_counter)
+
             output_video.write(results[0])
         else:
             output_video.write(results)
