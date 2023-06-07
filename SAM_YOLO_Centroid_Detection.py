@@ -593,7 +593,7 @@ if __name__ == '__main__':
             pass
         else:
             print("Centroid List: " , centroid_list)
-            cv2.imshow("Final frame", result_frame)
+#             cv2.imshow("Final frame", result_frame)  # Comment out this line if using SSH to run the code
         output_video.write(result_frame)
         #else:
             #output_video.write(results)
