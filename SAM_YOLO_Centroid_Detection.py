@@ -561,8 +561,8 @@ if __name__ == '__main__':
     
 
     # Load the video
-    video_name = 'apple_cutting.mp4'
-    video_path = os.path.join('Videos', video_name) # Load the appropriate video path 
+    video_name = 'cam_1_og_video.mp4'
+    video_path = os.path.join('Videos/Test Videos', video_name) # Load the appropriate video path 
     if os.path.isfile(video_path):
         print("Video file exists!")
         video = cv2.VideoCapture(video_path)
@@ -571,9 +571,9 @@ if __name__ == '__main__':
     
 
     ## Flags
-    yolo_all = True  #Toggle if you want to see all the detected objects or not
+    yolo_all = False  #Toggle if you want to see all the detected objects or not
 
-    output_path = os.path.join('Videos/Test Videos', 'yolo_all_' + video_name)  # Load the appropriate video path
+    output_path = os.path.join('Videos/Test Videos', 'sam_live_centroid_video.mp4')  # Load the appropriate video path
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_video = cv2.VideoWriter(output_path, fourcc, 30.0, (int(video.get(3)), int(video.get(4))))
 
@@ -587,22 +587,17 @@ if __name__ == '__main__':
         # Break the loop if the video ends
         if not ret:
             break
-
-        results = calculate_centroid(frame, YOLO, SAM, poi='apple', yolo_centroid=True, yolo_all=yolo_all)
-        if not yolo_all:
-            print("Results[1]", results[1])
-            if results[1] == 0:
-                pass
-            else:
-                if len(results[1]) != 0 and (frame_counter <= 50 or len(results[1]) >= 2):
-                    cv2.imshow("Final frame", results[0])
-                    cv2.waitKey(500)
-                    cv2.destroyAllWindows()
-
-            output_video.write(results[0])
+        result_frame, centroid_list = calculate_centroid(frame, YOLO, SAM, poi='apple', sam_centroid=True, yolo_all=False)
+        # cv2.imshow(f'Centroid Detection', results)
+        if len(centroid_list) == 0:
+            pass
         else:
-            output_video.write(results)
-        frame_counter += 1
+            print("Centroid List: " , centroid_list)
+            cv2.imshow("Final frame", result_frame)
+        output_video.write(result_frame)
+        #else:
+            #output_video.write(results)
+        #frame_counter += 1
 
     print("Process Finished!!!")
     print(f"Output video saved at: {output_path}")
