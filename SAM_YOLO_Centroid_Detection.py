@@ -86,26 +86,16 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
         - cent_y (int): The y-coordinate of the centroid.
 
     """
-    print("HERE!")
-    #cv2.imshow('image', image)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
-    
-
     if len(anns) == 0: return
     
     # Compute the centroid of the largest mask
     poi_mask = sorted(anns, key=lambda x: x['area'], reverse=True)[0]['segmentation']
     cent_x, cent_y = get_centroid(poi_mask)
     
-    print("Cx, Cy: {}, {}".format(cent_x, cent_y))
-    
     poi_mask = (poi_mask * 255).astype(np.uint8)
     
     # Convert the mask to uint8 and find contours
     contours, _ = cv2.findContours(poi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    print("Cx, Cy: {}, {}".format(cent_x, cent_y))
     
     # Create a filled colored mask and apply it to the image
     color = (255, 165, 0) if not random_color else tuple(np.random.randint(0, 255, 3).tolist())
@@ -132,8 +122,7 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
     #cv2.imshow('output_img', output_img)
     #cv2.waitKey(0)
     #cv2.destroyAllWindows()
-    
-    print("Cx, Cy 3: {}, {}".format(cent_x, cent_y))
+
     return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y
 
 
