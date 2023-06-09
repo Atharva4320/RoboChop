@@ -7,8 +7,9 @@ import pyrealsense2 as rs
 from SAM_YOLO_Centroid_Detection import *
 import ultralytics
 from ultralytics import YOLO
+# import UdpComms as U
 from UDPComms import Publisher
-from threading import Thread
+#from threading import Thread
 import time 
 
 # Package versions:
@@ -21,7 +22,7 @@ serial_number = '220222066259'  # Replace with the desired camera's serial numbe
 W = 848
 H = 480
 
-pub = Publisher(5500)  # Generate a publisher
+pub = Publisher(5501)  # Generate a publisher
 
 if __name__ == '__main__':
 
@@ -29,7 +30,6 @@ if __name__ == '__main__':
     config = rs.config()
    
     pipeline_wrapper = rs.pipeline_wrapper(pipeline)
-    print('Pipeline wrapper: ', pipeline_wrapper)
     pipeline_profile = config.resolve(pipeline_wrapper)
     device = pipeline_profile.get_device()
     device_product_line = str(device.get_info(rs.camera_info.product_line))
@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
     # align stream
     aligned_stream = rs.align(rs.stream.color)
+    point_cloud = rs.pointcloud()
 
     # start streaming
     pipeline.start(config)
@@ -103,7 +104,11 @@ if __name__ == '__main__':
         frames = aligned_stream.process(frames)
         color_frame = frames.get_color_frame()
         color_image = np.asanyarray(color_frame.get_data())
-       
+        depth_frame = frames.get_depth_frame().as_depth_frame()
+
+        points = point_cloud.calculate(depth_frame)
+        verts = np.asanyarray(points.get_vertices()).view(np.float32).reshape(-1, W, 3)
+
         # cv2.imshow("Original Frame", color_image)  # Display original frame (for debugging)
        
        
@@ -112,24 +117,35 @@ if __name__ == '__main__':
 
         result_frame, centroid_list = calculate_centroid(color_image, YOLO, SAM, poi='apple', yolo_centroid=True)
         # cv2.imshow(f'Centroid Detection', results)
-        if len(centroid_list) == 0:
-            pass
-        else:
-            print("Centroid List: " , centroid_list)
+        # if len(centroid_list) == 0:
+        #     pass
+        # else:
+        #     print("Centroid List: " , centroid_list)
         
         t = time.localtime()
         current_time = time.strftime("%H:%M:%S", t)
 
-        message = [current_time, centroid_list]
+        ## in a for loop:
+        coord_list = []
+        print("CENT: ", centroid_list)
+        if len(centroid_list) == 0:
+            message = "No centroid Detected!"
+        else: 
+            for centroids in centroid_list:
+                print(verts.shape)
+                obj_points = verts[centroids[1], centroids[0]].reshape(-1,3).tolist()
+                coord_list.append(obj_points[0])
 
+            message = coord_list
+        
+        print("Centroids : ", message)
         pub.send(message)  # Send the message
 
         cv2.imshow("Final frame", result_frame)
         out.write(result_frame)
         
-        key = cv2.waitKey(1)
         # Press 'q' or 'esc' to break the loop
-        if key & 0xFF == ord('q') or key == 27:
+        if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
             break
         count += 1
        

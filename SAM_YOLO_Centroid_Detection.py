@@ -119,9 +119,6 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
     
     # Combine the masked foreground and the background
     output_img = cv2.add(cv2.bitwise_and(img_, mask), cv2.bitwise_and(image, cv2.bitwise_not(mask)))
-    #cv2.imshow('output_img', output_img)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
 
     return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y
 
@@ -184,14 +181,12 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 
     # Find indices of the detected objects that match the target_class
     indices = np.where(names == target_class)  # Search for target object
-    print("Indices: ", indices[0], len(indices[0]))
      
     # If target_class is found in the detected objects, extract its bounding box coordinates
     if len(indices[0]) != 0:  # Found a target object
     	for i in range(len(indices[0])):
     		box = boxes[indices[0][i]].xyxy[0].astype(int)  # Get the box coordinates of the target
     		boxes_list.append(box)
-    	print("Box Coordinates: \n", boxes_list)
     	#x1, y1, x2, y2 = boxes[indices[0][0]].xyxy[0].astype(int)  # Get the box coordinates of the target
     	return image, boxes_list
     else:  # If target_class is not found, return the original image and empty list
@@ -254,9 +249,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
     if yolo_centroid:
     	for bc in box_coord:
     	    frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, bc[0], bc[1], bc[2], bc[3])
-    	    print("Centroid for {} cent x: {}, cent_y: {}".format(bc, centroid_x, centroid_y))
     	    cent_list.append([centroid_x, centroid_y])
-    	print(cent_list)
     	return frame, cent_list if return_frame else cent_list
     	    
     elif sam_centroid:
@@ -360,7 +353,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
     # This function calculates the centroid using yolo bounding box
     yolo_centX, yolo_centY = (x2 + x1) // 2, (y2 + y1) // 2
     frame = draw_cross_centroid(frame, yolo_centX, yolo_centY, (0, 255, 0))
-    return frame, yolo_centX, yolo_centY
+    return frame, int(yolo_centX), int(yolo_centY)
 
 
 
@@ -420,7 +413,7 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
     #cv2.waitKey(0)
     #cv2.destroyAllWindows()
     
-    return frame, sam_centX, sam_centY
+    return frame, int(sam_centX), int(sam_centY)
 
 
 
@@ -453,8 +446,6 @@ def draw_cross_centroid(frame, centX, centY, color):
     cv2.line(frame, (centX + line_length, centY - line_length), (centX - line_length, centY + line_length), color, thickness)
     font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
     coordinates_text = f"({centX}, {centY})"
-    #print("HERE")
-    #print(coordinates_text)
     cv2.putText(frame, coordinates_text, (centX - 50, centY - 50), font, size, color, thickness)
     return frame
 
@@ -484,7 +475,6 @@ def draw_circle_centroid(frame, centX, centY, color):
         The frame with the drawn centroid.
     """
     # This function draws circle centroid on the frame
-    #print("SAM Segmentation Centroid: x={}, y={}\n".format(centX, centY))
     cv2.circle(frame, (centX, centY), radius=5, color=color, thickness=cv2.FILLED)
     font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
     coordinates_text = f"({centX}, {centY})"
@@ -579,10 +569,10 @@ if __name__ == '__main__':
             break
         result_frame, centroid_list = calculate_centroid(frame, YOLO, SAM, poi='apple', sam_centroid=True, yolo_all=False, display_mask=True)
         # cv2.imshow(f'Centroid Detection', results)
-        if len(centroid_list) == 0:
-            pass
-        else:
-            print("Centroid List: " , centroid_list)
+        # if len(centroid_list) == 0:
+        #     pass
+        # else:
+        #     print("Centroid List: " , centroid_list)
 #             cv2.imshow("Final frame", result_frame)  # Comment out this line if using SSH to run the code
         output_video.write(result_frame)
         #else:
