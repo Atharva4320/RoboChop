@@ -22,7 +22,7 @@ serial_number = '220222066259'  # Replace with the desired camera's serial numbe
 W = 848
 H = 480
 
-pub = Publisher(5500)  # Generate a publisher
+pub = Publisher(5501)  # Generate a publisher
 
 if __name__ == '__main__':
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
         points = point_cloud.calculate(depth_frame)
         verts = np.asanyarray(points.get_vertices()).view(np.float32).reshape(-1, W, 3)
-       
+
         # cv2.imshow("Original Frame", color_image)  # Display original frame (for debugging)
        
        
@@ -127,11 +127,16 @@ if __name__ == '__main__':
 
         ## in a for loop:
         coord_list = []
-        for centroids in centroid_list:
-            obj_points = verts[centroids[0], centroids[1]].reshape(-1,3).tolist()
-            coord_list.append(obj_points[0])
+        print("CENT: ", centroid_list)
+        if len(centroid_list) == 0:
+            message = "No centroid Detected!"
+        else: 
+            for centroids in centroid_list:
+                print(verts.shape)
+                obj_points = verts[centroids[1], centroids[0]].reshape(-1,3).tolist()
+                coord_list.append(obj_points[0])
 
-        message = coord_list
+            message = coord_list
         
         print("Centroids : ", message)
         pub.send(message)  # Send the message
