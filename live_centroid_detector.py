@@ -110,7 +110,7 @@ if __name__ == '__main__':
         # Write the color frame to the video file
         out_og.write(color_image)
 
-        result_frame, centroid_list = calculate_centroid(color_image, YOLO, SAM, poi='apple', yolo_centroid=True, yolo_all=False)
+        result_frame, centroid_list = calculate_centroid(color_image, YOLO, SAM, poi='apple', yolo_centroid=True)
         # cv2.imshow(f'Centroid Detection', results)
         if len(centroid_list) == 0:
             pass
