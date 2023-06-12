@@ -7,7 +7,7 @@ import pyrealsense2 as rs
 from SAM_YOLO_Centroid_Detection import *
 import ultralytics
 from ultralytics import YOLO
-# import UdpComms as U
+import UdpComms as U
 from UDPComms import Publisher
 #from threading import Thread
 import time 
@@ -17,12 +17,15 @@ print("Np version: ", np.__version__)
 print("CV2 version: ", cv2.__version__)
 
 # Camera 1 (end-effector)
-serial_number = '220222066259'  # Replace with the desired camera's serial number
+serial_number = '151322061880'  # Replace with the desired camera's serial number
 
 W = 848
 H = 480
 
-pub = Publisher(5501)  # Generate a publisher
+# pub = Publisher(5502)  # Generate a publisher
+
+upd = U.UdpComms(udpIp='172.26.69.200', sendIP='127.0.1.1', portTX=5500, portRX=5501)
+    
 
 if __name__ == '__main__':
 
@@ -98,6 +101,7 @@ if __name__ == '__main__':
     ## EXECUTION:
     duration = 90 
     count = 0
+    
     while True :
         # Get the frames
         frames = pipeline.wait_for_frames()
@@ -139,7 +143,8 @@ if __name__ == '__main__':
             message = coord_list
         
         print("Centroids : ", message)
-        pub.send(message)  # Send the message
+        udp.SendData(str(message))
+        #pub.send(message)  # Send the message
 
         cv2.imshow("Final frame", result_frame)
         out.write(result_frame)
