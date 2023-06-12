@@ -24,10 +24,12 @@ H = 480
 
 # pub = Publisher(5502)  # Generate a publisher
 
-upd = U.UdpComms(udpIp='172.26.69.200', sendIP='127.0.1.1', portTX=5500, portRX=5501)
+
     
 
 if __name__ == '__main__':
+
+    udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501)
 
     pipeline = rs.pipeline()
     config = rs.config()
@@ -113,31 +115,20 @@ if __name__ == '__main__':
         points = point_cloud.calculate(depth_frame)
         verts = np.asanyarray(points.get_vertices()).view(np.float32).reshape(-1, W, 3)
 
-        # cv2.imshow("Original Frame", color_image)  # Display original frame (for debugging)
-       
-       
         # Write the color frame to the video file
         out_og.write(color_image)
 
         result_frame, centroid_list = calculate_centroid(color_image, YOLO, SAM, poi='apple', yolo_centroid=True)
-        # cv2.imshow(f'Centroid Detection', results)
-        # if len(centroid_list) == 0:
-        #     pass
-        # else:
-        #     print("Centroid List: " , centroid_list)
         
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-
+        
         ## in a for loop:
         coord_list = []
-        print("CENT: ", centroid_list)
         if len(centroid_list) == 0:
             message = "No centroid Detected!"
         else: 
             for centroids in centroid_list:
                 print(verts.shape)
-                obj_points = verts[centroids[1], centroids[0]].reshape(-1,3).tolist()
+                obj_points = verts[centroids[0], centroids[1]].reshape(-1,3).tolist()
                 coord_list.append(obj_points[0])
 
             message = coord_list
