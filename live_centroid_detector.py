@@ -24,7 +24,7 @@ H = 480
 
 # pub = Publisher(5502)  # Generate a publisher
 
-upd = U.UdpComms(udpIp='172.26.69.200', sendIP='127.0.1.1', portTX=5500, portRX=5501)
+udp = U.UdpComms(udpIp='172.26.69.200', sendIP='127.0.1.1', portTX=5500, portRX=5501)
     
 
 if __name__ == '__main__':
