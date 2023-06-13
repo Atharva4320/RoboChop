@@ -122,11 +122,10 @@ if __name__ == '__main__':
         ## in a for loop:
         coord_list = []
         if len(centroid_list) == 0:
-            message = "No centroid Detected!"
+            message = None #"No centroid Detected!"
         else: 
             for centroids in centroid_list:
-                # print(verts.shape)
-                obj_points = verts[centroids[1]-10 : centroids[1]+10, centroids[0]-10 : centroids[0]+10].reshape(-1,3).tolist()
+                obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3).tolist()
                 
                 zs = obj_points[:,2]
                 z = np.median(zs)

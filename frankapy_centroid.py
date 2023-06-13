@@ -41,9 +41,9 @@ while True:
 		message = udp.ReadReceivedData()
 		if message is None:
 			continue
-		if message == 'No centroid Detected!':
-			continue
-		# if message is ''
+		# if message == 'No centroid Detected!':
+		# 	continue
+		# # if message is ''
 		# message = sub.get()
 		# print(udp.rxThread)
 		# udp.ReadUdpThreadFunc()
