@@ -31,6 +31,14 @@ realsense_to_ee_transform = RigidTransform.load(args.extrinsics_file_path)
 # print("\nGo to observation pose...")
 # fa.goto_pose(pose)
 
+# dictionary of camera serials
+# 1: '220222066259',
+# 2: '151322066099',
+# 3: '151322069488',
+# 4: '151322061880',
+# 5: '151322066932'
+
+
 # sub = Subscriber(5502, timeout=0.2)
 # updIP: This computer, SendIP: other computer 
 udp = U.UdpComms(udpIP='172.26.5.54', sendIP='172.26.69.200', portTX=5501, portRX=5500, enableRX=True)

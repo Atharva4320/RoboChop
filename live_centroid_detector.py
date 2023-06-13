@@ -16,6 +16,14 @@ import time
 print("Np version: ", np.__version__)
 print("CV2 version: ", cv2.__version__)
 
+
+# dictionary of camera serials
+# 1: '220222066259',
+# 2: '151322066099',
+# 3: '151322069488',
+# 4: '151322061880',
+# 5: '151322066932'
+
 # Camera 1 (end-effector)
 serial_number = '151322061880'  # Replace with the desired camera's serial number
 
