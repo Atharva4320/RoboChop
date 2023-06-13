@@ -24,8 +24,8 @@ print("CV2 version: ", cv2.__version__)
 # 4: '151322061880',
 # 5: '151322066932'
 
-# Camera 1 (end-effector)
-serial_number = '151322061880'  # Replace with the desired camera's serial number
+# Camera:
+serial_number = '220222066259'  # Replace with the desired camera's serial number
 
 W = 848
 H = 480
@@ -35,7 +35,7 @@ H = 480
 
 if __name__ == '__main__':
 
-    #udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501)
+    udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501)
 
     pipeline = rs.pipeline()
     config = rs.config()
@@ -63,8 +63,8 @@ if __name__ == '__main__':
 
     # Define the codec and create a VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_path = os.path.join('Videos/Test Videos', 'yolo_live_centroid_video.mp4')
-    output_path_og = os.path.join('Videos/Test Videos', 'cam_1_og_video.mp4')
+    output_path = os.path.join('Videos/Test Videos', 'apple_cutting_video_robot_pov.mp4')
+    output_path_og = os.path.join('Videos/Test Videos', 'cam_1_apple_video.mp4')
     out = cv2.VideoWriter(output_path, fourcc, 30, (W, H))
     out_og = cv2.VideoWriter(output_path_og, fourcc, 30, (W, H))
 
@@ -151,7 +151,7 @@ if __name__ == '__main__':
             message = coord_list
         
         print("Centroids : ", message)
-        #udp.SendData(str(message))
+        udp.SendData(str(message))
         #pub.send(message)  # Send the message
 
         cv2.imshow("Final frame", result_frame)
