@@ -125,9 +125,21 @@ if __name__ == '__main__':
             message = "No centroid Detected!"
         else: 
             for centroids in centroid_list:
-                print(verts.shape)
-                obj_points = verts[centroids[0], centroids[1]].reshape(-1,3).tolist()
-                coord_list.append(obj_points[0])
+                # print(verts.shape)
+                obj_points = verts[centroids[1]-10 : centroids[1]+10, centroids[0]-10 : centroids[0]+10].reshape(-1,3).tolist()
+                
+                zs = obj_points[:,2]
+                z = np.median(zs)
+                xs = obj_points[:,0]
+                ys = obj_points[:,1]
+                ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background
+                x_pos = np.median(xs)
+                y_pos = np.median(ys)
+                z_pos = z
+
+                median_point = np.array([x_pos, y_pos, z_pos])
+
+                coord_list.append(median_point)
 
             message = coord_list
         
