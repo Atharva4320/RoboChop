@@ -27,7 +27,7 @@ fa = FrankaArm()
 fa.reset_pose()
 fa.reset_joints()
 reset_pose = fa.get_pose()
-reset_pose.translation = np.array([0.55, 0, 0.6]) # x was 0.55 before
+reset_pose.translation = np.array([0.65, 0, 0.5]) # x was 0.55 before
 print("\nGo to observation pose...")
 fa.goto_pose(reset_pose)
 
@@ -44,6 +44,7 @@ fa.goto_pose(reset_pose)
 udp = U.UdpComms(udpIP='172.26.5.54', sendIP='172.26.69.200', portTX=5501, portRX=5500, enableRX=True)
 
 print("entering loop....")
+count = 0
 while True:
 	try: 
 		message = udp.ReadReceivedData()
@@ -66,17 +67,27 @@ while True:
 		# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
 		com = np.array([com[0] - 0.015, -com[1] + 0.02, com[2] + 0.02]) # should be the x,y,z position in robot frame
 		print("COM: ", com)
-		robot_pose.translation = np.array([com[0], com[1], com[2] + 0.11])
+		robot_pose.translation = np.array([com[0], com[1], com[2] + 0.10])
 
 		fa.goto_pose(robot_pose)
 		time.sleep(5)
+		
 
-		fa.goto_gripper(0, block=False)
-		fa.apply_effector_forces_along_axis(1.0, 0.5, 0.06, forces=[0.,0.,-75.])
+		if count % 2 == 0:
+			# Cutting action: 
+			print("\nCutting...")
+			# fa.goto_gripper(0, block=False)
+			# fa.apply_effector_forces_along_axis(1.0, 0.5, 0.06, forces=[0.,0.,-75.])
+			time.sleep(1)
+
+			print("\nGo to observation pose after cutting...")
+			fa.reset_pose()
+			fa.reset_joints()
+			# fa.goto_pose(reset_pose)
+		# 	break
 
 		print("\nGo to observation pose...")
 		fa.goto_pose(reset_pose)
-		break
 
 	except timeout:
 		print("no message")
@@ -90,6 +101,8 @@ while True:
 	# 	# warning.warn("UDPComms timeout")
 	# 	print("UDPComss timeout")
 	# 	break
+
+	count += 1
 
 
 
