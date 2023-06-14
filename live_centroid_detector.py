@@ -8,9 +8,9 @@ from SAM_YOLO_Centroid_Detection import *
 import ultralytics
 from ultralytics import YOLO
 import UdpComms as U
-#from UDPComms import Publisher
-#from threading import Thread
 import time 
+import matplotlib.pyplot as plt
+import open3d as o3d
 
 # Package versions:
 print("Np version: ", np.__version__)
@@ -25,7 +25,7 @@ print("CV2 version: ", cv2.__version__)
 # 5: '151322066932'
 
 # Camera:
-serial_number = '220222066259'  # Replace with the desired camera's serial number
+#serial_number = '220222066259'  # Replace with the desired camera's serial number
 
 W = 848
 H = 480
@@ -34,20 +34,22 @@ H = 480
  
 
 if __name__ == '__main__':
-
-    udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501)
-
-    pipeline = rs.pipeline()
-    config = rs.config()
+    message = []
+    #%%  Cameras to test: 1 and 3  %%#
+    ##-------------------------------------------------------------------------------------------------------------
+    # Camera 1: 
+    serial_number_1 = '220222066259'
+    pipeline_1 = rs.pipeline()
+    config_1 = rs.config()
    
-    pipeline_wrapper = rs.pipeline_wrapper(pipeline)
-    pipeline_profile = config.resolve(pipeline_wrapper)
-    device = pipeline_profile.get_device()
-    device_product_line = str(device.get_info(rs.camera_info.product_line))
+    pipeline_wrapper_1 = rs.pipeline_wrapper(pipeline_1)
+    pipeline_profile_1 = config_1.resolve(pipeline_wrapper_1)
+    device_1 = pipeline_profile_1.get_device()
+    device_product_line_1 = str(device_1.get_info(rs.camera_info.product_line))
    
-    config.enable_device(serial_number)
-    config.enable_stream(rs.stream.depth, W, H, rs.format.z16, 30)
-    config.enable_stream(rs.stream.color, W, H, rs.format.bgr8, 30)
+    config_1.enable_device(serial_number_1)
+    config_1.enable_stream(rs.stream.depth, W, H, rs.format.z16, 30)
+    config_1.enable_stream(rs.stream.color, W, H, rs.format.bgr8, 30)
 
 
     # align stream
@@ -55,18 +57,40 @@ if __name__ == '__main__':
     point_cloud = rs.pointcloud()
 
     # start streaming
-    pipeline.start(config)
+    pipeline_1.start(config_1)
+
+    ##-------------------------------------------------------------------------------------------------------------
+    # Camera 3:
+    serial_number_3 = '151322069488'
+    pipeline_3 = rs.pipeline()
+    config_3 = rs.config()
+   
+    pipeline_wrapper_3 = rs.pipeline_wrapper(pipeline_3)
+    pipeline_profile_3 = config_3.resolve(pipeline_wrapper_3)
+    device_3 = pipeline_profile_3.get_device()
+    device_product_line_3 = str(device_3.get_info(rs.camera_info.product_line))
+   
+    config_3.enable_device(serial_number_3)
+    config_3.enable_stream(rs.stream.depth, W, H, rs.format.z16, 30)
+    config_3.enable_stream(rs.stream.color, W, H, rs.format.bgr8, 30)
 
 
-    # Create a window to display the video
-    #cv2.namedWindow('Video Stream', cv2.WINDOW_AUTOSIZE)
+    # align stream
+    aligned_stream = rs.align(rs.stream.color)
+    point_cloud = rs.pointcloud()
+
+    # start streaming
+    pipeline_3.start(config_3)
+
+
+    udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501)
 
     # Define the codec and create a VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_path = os.path.join('Videos/Test Videos', 'apple_cutting_video_robot_pov.mp4')
-    output_path_og = os.path.join('Videos/Test Videos', 'cam_1_apple_video.mp4')
-    out = cv2.VideoWriter(output_path, fourcc, 30, (W, H))
-    out_og = cv2.VideoWriter(output_path_og, fourcc, 30, (W, H))
+    output_path_1 = os.path.join('Videos/Test Videos', 'cam_1_video.mp4')
+    output_path_3 = os.path.join('Videos/Test Videos', 'cam_3_video.mp4')
+    out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
+    out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 
 
     ## SETUP:
@@ -106,34 +130,75 @@ if __name__ == '__main__':
     else:
         print("The file does not exits.")
 
-    ## EXECUTION:
-    duration = 90 
-    count = 0
+    # ## EXECUTION:
+    # duration = 90 
+    # count = 0
     
     while True :
-        # Get the frames
-        frames = pipeline.wait_for_frames()
-        frames = aligned_stream.process(frames)
-        color_frame = frames.get_color_frame()
-        color_image = np.asanyarray(color_frame.get_data())
-        depth_frame = frames.get_depth_frame().as_depth_frame()
+        # Get the frames of camera 1
+        frames_1 = pipeline_1.wait_for_frames()
+        frames_1 = aligned_stream.process(frames_1)
+        color_frame_1 = frames_1.get_color_frame()
+        color_image_1 = np.asanyarray(color_frame_1.get_data())
+        # color_image_1 = cv2.flip(color_image_1, 0)
+        depth_frame = frames_1.get_depth_frame().as_depth_frame()
 
         points = point_cloud.calculate(depth_frame)
         verts = np.asanyarray(points.get_vertices()).view(np.float32).reshape(-1, W, 3)
 
-        # Write the color frame to the video file
-        out_og.write(color_image)
 
-        result_frame, centroid_list = calculate_centroid(color_image, YOLO, SAM, poi='apple', yolo_centroid=True)
+        # Get the frames of camera 3
+        frames_3 = pipeline_3.wait_for_frames()
+        frames_3 = aligned_stream.process(frames_3)
+        color_frame_3 = frames_3.get_color_frame()
+        color_image_3 = np.asanyarray(color_frame_3.get_data())
+
+        # Display the videos
+        cv2.imshow("Camera 3", color_image_3)
+
+        # Save the cam 3 video:
+        out_3.write(color_image_3)
+
+        result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='apple', yolo_centroid=True)
         
         
         ## in a for loop:
         coord_list = []
         if len(centroid_list) == 0:
-            message = None #"No centroid Detected!"
+            # message = None 
+            pass
         else: 
             for centroids in centroid_list:
+                print("centroid: ", centroids[1], centroids[0])
                 obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
+                # all_points = verts[:, :].reshape(-1, 3)
+                # print('all_points', all_points.shape)
+                # mean_point = np.mean(all_points, axis=0)
+                # all_points_cropped = []
+                # print("mean_point", mean_point)
+                # for point in all_points:
+                #     if np.linalg.norm(point - mean_point) < 1:
+                #         all_points_cropped.append(point)
+                
+                # all_points = np.array(all_points_cropped)
+                # print('croped_all_points', all_points.shape)
+                # print("obj_points", obj_points)
+                # fig = plt.figure()
+                # ax = fig.add_subplot(projection='3d')
+                # ax.scatter(all_points[:,0], all_points[:,1], all_points[:,2], c='green')
+                # ax.scatter(obj_points[:,0], obj_points[:,1], obj_points[:,2], c='red')
+                # plt.show()
+
+                # obj = o3d.geometry.PointCloud()
+                # obj.points = o3d.utility.Vector3dVector(obj_points)
+                # pcl_colors = np.tile(np.array([1, 0, 0]), (len(obj_points),1))
+                # obj.colors = o3d.utility.Vector3dVector(pcl_colors)
+
+                # all = o3d.geometry.PointCloud()
+                # all.points = o3d.utility.Vector3dVector(all_points)
+                # all_colors = np.tile(np.array([0, 0, 1]), (len(all_points),1))
+                # all.colors = o3d.utility.Vector3dVector(all_colors)
+                # o3d.visualization.draw_geometries([all, obj])
                 
                 zs = obj_points[:,2]
                 z = np.median(zs)
@@ -144,6 +209,12 @@ if __name__ == '__main__':
                 y_pos = np.median(ys)
                 z_pos = z
 
+                # print("x_pos, y_pos", x_pos, y_pos)
+
+### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
+                y_pos = -y_pos
+
+
                 median_point = np.array([x_pos, y_pos, z_pos])
 
                 coord_list.append(median_point)
@@ -151,19 +222,19 @@ if __name__ == '__main__':
             message = coord_list
         
         print("Centroids : ", message)
-        udp.SendData(str(message))
-        #pub.send(message)  # Send the message
+        print("Centroid list: ", centroid_list)
+        udp.SendData(str(message))  # Send the message
 
         cv2.imshow("Final frame", result_frame)
-        out.write(result_frame)
+        out_1.write(result_frame)
         
         # Press 'q' or 'esc' to break the loop
         if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
             break
-        count += 1
        
     # Release resources and close the window
-    out.release()
-    out_og.release()
-    pipeline.stop()
+    out_1.release()
+    out_3.release()
+    pipeline_1.stop()
+    pipeline_3.stop()
     cv2.destroyAllWindows()
