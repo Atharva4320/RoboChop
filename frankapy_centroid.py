@@ -27,7 +27,7 @@ fa = FrankaArm()
 fa.reset_pose()
 fa.reset_joints()
 reset_pose = fa.get_pose()
-reset_pose.translation = np.array([0.65, 0, 0.5]) # x was 0.55 before
+reset_pose.translation = np.array([0.65, 0, 0.4]) # x was 0.55 before
 print("\nGo to observation pose...")
 fa.goto_pose(reset_pose)
 
@@ -65,7 +65,7 @@ while True:
 		# print("COM: ", com)
 
 		# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
-		com = np.array([com[0] - 0.015, -com[1] + 0.02, com[2] + 0.02]) # should be the x,y,z position in robot frame
+		com = np.array([com[0], -com[1] + 0.02, com[2] + 0.02]) # should be the x,y,z position in robot frame
 		print("COM: ", com)
 		robot_pose.translation = np.array([com[0], com[1], com[2] + 0.10])
 
@@ -73,18 +73,18 @@ while True:
 		time.sleep(5)
 		
 
-		if count % 2 == 0:
+		if count >= 1:
 			# Cutting action: 
 			print("\nCutting...")
-			# fa.goto_gripper(0, block=False)
-			# fa.apply_effector_forces_along_axis(1.0, 0.5, 0.06, forces=[0.,0.,-75.])
+			fa.goto_gripper(0, block=False)
+			fa.apply_effector_forces_along_axis(1.0, 0.5, 0.06, forces=[0.,0.,-75.])
 			time.sleep(1)
 
 			print("\nGo to observation pose after cutting...")
-			fa.reset_pose()
-			fa.reset_joints()
-			# fa.goto_pose(reset_pose)
-		# 	break
+			# fa.reset_pose()
+			# fa.reset_joints()
+			fa.goto_pose(reset_pose)
+			break
 
 		print("\nGo to observation pose...")
 		fa.goto_pose(reset_pose)

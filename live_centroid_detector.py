@@ -204,7 +204,7 @@ if __name__ == '__main__':
                 z = np.median(zs)
                 xs = obj_points[:,0]
                 ys = obj_points[:,1]
-                ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background
+                ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background <-  #TODO Try removing
                 x_pos = np.median(xs)
                 y_pos = np.median(ys)
                 z_pos = z
@@ -213,6 +213,7 @@ if __name__ == '__main__':
 
 ### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
                 y_pos = -y_pos
+                x_pos = -x_pos
 
 
                 median_point = np.array([x_pos, y_pos, z_pos])
