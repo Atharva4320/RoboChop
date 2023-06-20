@@ -162,3 +162,4 @@ cython_debug/
 # Ignore all files in the Models folder
 Models/*
 *.pt
+Dataset/.DS_Store
