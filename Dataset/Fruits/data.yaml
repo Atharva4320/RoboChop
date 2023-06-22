@@ -2,8 +2,8 @@ train: ../train/images
 val: ../valid/images
 test: ../test/images
 
-nc: 8
-names: ['Apple', 'Banana', 'Coconut', 'Grapes', 'Guava', 'Lime', 'Orange', 'Tomato']
+nc: 9
+names: ['Apple', 'Pineapple', 'Banana', 'Coconut', 'Grapes', 'Guava', 'Lime', 'Orange', 'Tomato']
 
 roboflow:
   workspace: vv-8jika
