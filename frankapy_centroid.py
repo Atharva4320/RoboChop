@@ -5,7 +5,17 @@ from frankapy import FrankaArm
 from perception import CameraIntrinsics
 from UDPComms import Subscriber, timeout, Scope
 import UdpComms as U
+import ast
 # import warning
+
+def get_largest_area_idx(dict):
+	largest_area = float('-inf')
+	area_idx = None
+	for idx, (_, area) in dict.items():
+		if area > largest_area:
+			largest_area = area
+			area_idx = idx
+	return area_idx
 
 # import camera intrinsics and extrinsics
 # REALSENSE_INTRINSICS = "vision_module/2D_vision/calib/realsense_intrinsics_camera4.intr"
@@ -44,8 +54,10 @@ fa.goto_pose(reset_pose)
 udp = U.UdpComms(udpIP='172.26.5.54', sendIP='172.26.69.200', portTX=5501, portRX=5500, enableRX=True)
 
 print("entering loop....")
+n_pieces = 2 # parameter to set to dictate number of target pieces
 count = 0
-while True:
+prev_cut_pos = np.array([0.65, 0, 0.4])
+while n_pieces > obs_objects:
 	try: 
 		message = udp.ReadReceivedData()
 		if message is None:
@@ -53,56 +65,107 @@ while True:
 
 		print(message)
 
-		x = float(message.split(',')[0].split('[')[2])
-		y = float(message.split(',')[1])
-		z = float(message.split(',')[2].split(']')[0])
+		# TODO: include a loop through the different objects in the scene and counts the current object number
+		objs = ast.literal_eval(message)
+		print("obj shape: ", objs.shape)
 
-		# com = get_object_center_point_in_world_realsense_static_camera(np.array([x,y,z]), realsense_intrinsics, realsense_to_ee_transform)
-		# print("COM: ", com)
+		obs_objects = len(objs) # TODO: double check this is outputing the correct number of objects
+		obj_dict = {}
 
-		robot_pose = fa.get_pose()
-		com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), realsense_intrinsics, realsense_to_ee_transform, robot_pose)
-		# print("COM: ", com)
+		for i in range(len(objs)):
+			# TODO: reformat to index the objs list instead of string parsing
+			x = float(message.split(',')[0].split('[')[2])
+			y = float(message.split(',')[1])
+			z = float(message.split(',')[2].split(']')[0])
+			area = float(message.split(',')[3])
 
-		# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
-		com = np.array([com[0], -com[1] + 0.02, com[2] + 0.02]) # should be the x,y,z position in robot frame
-		print("COM: ", com)
-		robot_pose.translation = np.array([com[0], com[1], com[2] + 0.10])
+			robot_pose = fa.get_pose()
+			com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), realsense_intrinsics, realsense_to_ee_transform, robot_pose)
 
-		fa.goto_pose(robot_pose)
-		time.sleep(5)
+			# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
+			com = np.array([com[0], -com[1] + 0.02, com[2] + 0.02]) # should be the x,y,z position in robot frame
+			print("COM: ", com)
+			obj_dict[i] = (com, area)
+
+		# check if the expected count doesn't match the observed objects
+		if count != obs_objects:
+			if count > obs_objects:
+				# goto previous slice position and disturb the scene slightly
+				robot_pose.translation = np.array([prev_cut_pos[0], prev_cut_pos[1], prev_cut_pos[2] + 0.10])
+				fa.goto_pose(robot_pose)
+
+				# disturb the scene --> currently assuming cutting blade fixed, so only move in x-direction
+				robot_pose.translation = np.array([prev_cut_pos[0] - 0.03, prev_cut_pos[1], prev_cut_pos[2] + 0.10])
+				fa.goto_pose(robot_pose)
+				robot_pose.translation = np.array([prev_cut_pos[0] + 0.03, prev_cut_pos[1], prev_cut_pos[2] + 0.10])
+				fa.goto_pose(robot_pose)
+
+			else:
+				print("ERROR: we are incorrectly observing more objects than expected")
 		
+		# go to cut 
+		else:
+			# return the com with the largest area and hover above that object
+			idx = get_largest_area_idx(obj_dict)
+			com = obj_dict[idx][0]
+			prev_cut_pos = com
+			robot_pose.translation = np.array([com[0], com[1], com[2] + 0.10])
+			fa.goto_pose(robot_pose)
+			time.sleep(5)
 
-		if count >= 1:
 			# Cutting action: 
 			print("\nCutting...")
 			fa.goto_gripper(0, block=False)
 			fa.apply_effector_forces_along_axis(1.0, 0.5, 0.06, forces=[0.,0.,-75.])
 			time.sleep(1)
-
-			print("\nGo to observation pose after cutting...")
-			# fa.reset_pose()
-			# fa.reset_joints()
+			print("\nGo to observation pose...")
 			fa.goto_pose(reset_pose)
-			break
-
-		print("\nGo to observation pose...")
-		fa.goto_pose(reset_pose)
+			count += 1
 
 	except timeout:
 		print("no message")
-	# message = sub.get()
-	# print('message: ', message)
-	# try:
-	# 	message = sub.get()
-	# 	print('message: ', message)
+
+		# -------- old message parsing ----------
+		# x = float(message.split(',')[0].split('[')[2])
+		# y = float(message.split(',')[1])
+		# z = float(message.split(',')[2].split(']')[0])
+		# area = float(message.split(',')[3])
+
+		# com = get_object_center_point_in_world_realsense_static_camera(np.array([x,y,z]), realsense_intrinsics, realsense_to_ee_transform)
+		# print("COM: ", com)
+
+		# robot_pose = fa.get_pose()
+		# com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), realsense_intrinsics, realsense_to_ee_transform, robot_pose)
+		# # print("COM: ", com)
+
+		# # --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
+		# com = np.array([com[0], -com[1] + 0.02, com[2] + 0.02]) # should be the x,y,z position in robot frame
+		# print("COM: ", com)
+		# robot_pose.translation = np.array([com[0], com[1], com[2] + 0.10])
+
+		# fa.goto_pose(robot_pose)
+		# time.sleep(5)
+	
+	# 	if count >= 1:
+	# 		# Cutting action: 
+	# 		print("\nCutting...")
+	# 		fa.goto_gripper(0, block=False)
+	# 		fa.apply_effector_forces_along_axis(1.0, 0.5, 0.06, forces=[0.,0.,-75.])
+	# 		time.sleep(1)
+
+	# 		print("\nGo to observation pose after cutting...")
+	# 		# fa.reset_pose()
+	# 		# fa.reset_joints()
+	# 		fa.goto_pose(reset_pose)
+	# 		break
+
+	# 	print("\nGo to observation pose...")
+	# 	fa.goto_pose(reset_pose)
 
 	# except timeout:
-	# 	# warning.warn("UDPComms timeout")
-	# 	print("UDPComss timeout")
-	# 	break
+	# 	print("no message")
 
-	count += 1
+	# count += 1
 
 
 
