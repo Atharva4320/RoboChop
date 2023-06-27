@@ -9,8 +9,8 @@ print("Np version: ", np.__version__)
 print("CV2 version: ", cv2.__version__)
 
 # Camera 2 (static)
-serial_number = '151322066099'  # Replace with the desired camera's serial number
-video_duration = 10  # Video duration in seconds
+serial_number = '220222066259'  # Replace with the desired camera's serial number
+video_duration = 20  # Video duration in seconds
 
 W = 848
 H = 480
@@ -32,7 +32,7 @@ cv2.namedWindow('Video Stream', cv2.WINDOW_AUTOSIZE)
 
 # Define the codec and create a VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-output_path = os.path.join(os.path.expanduser('~'), 'cam_2_video.mp4')
+output_path = os.path.join(os.path.expanduser('~'), 'robot_pov_port_video.mp4')
 out = cv2.VideoWriter(output_path, fourcc, 30, (W, H))
 
 start_time = time.time()

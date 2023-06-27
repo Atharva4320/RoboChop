@@ -35,6 +35,7 @@ H = 480
 
 if __name__ == '__main__':
     message = []
+    centroid_list = []
     #%%  Cameras to test: 1 and 3  %%#
     ##-------------------------------------------------------------------------------------------------------------
     # Camera 1: 
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     pipeline_3.start(config_3)
 
 
-    udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501)
+    udp = U.UdpComms(udpIP='172.26.69.200', sendIP='172.26.5.54', portTX=5500, portRX=5501, enableRX=True)
 
     # Define the codec and create a VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -119,7 +120,7 @@ if __name__ == '__main__':
         warnings.warn("The file does not exits.")
     
     #============= Loading the YOLO Model =======================
-    model_path_YOLO = os.path.join('Models', 'yolov8n.pt')
+    model_path_YOLO = os.path.join('Models', 'best.pt')
     print(model_path_YOLO)
 
     if os.path.isfile(model_path_YOLO):
@@ -130,11 +131,17 @@ if __name__ == '__main__':
     else:
         print("The file does not exits.")
 
-    # ## EXECUTION:
-    # duration = 90 
-    # count = 0
-    
+    count = 0
     while True :
+        # init_message = udp.ReadReceivedData()
+        # if init_message is not None:
+        #     print(init_message.split(','))
+        # elif count % 1000000 == 0:
+        #     print("No message")
+        # # else:
+        # #     continue
+        # count += 1
+            
         # Get the frames of camera 1
         frames_1 = pipeline_1.wait_for_frames()
         frames_1 = aligned_stream.process(frames_1)
@@ -159,79 +166,120 @@ if __name__ == '__main__':
         # Save the cam 3 video:
         out_3.write(color_image_3)
 
-        result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='apple', yolo_centroid=True)
+        # frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
         
+        # frame_2, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='Apple', yolo_centroid=True, display_mask=False)
         
-        ## in a for loop:
-        coord_list = []
-        if len(centroid_list) == 0:
-            # message = None 
-            pass
-        else: 
-            for centroids in centroid_list:
-                print("centroid: ", centroids[1], centroids[0])
-                obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
-                # all_points = verts[:, :].reshape(-1, 3)
-                # print('all_points', all_points.shape)
-                # mean_point = np.mean(all_points, axis=0)
-                # all_points_cropped = []
-                # print("mean_point", mean_point)
-                # for point in all_points:
-                #     if np.linalg.norm(point - mean_point) < 1:
-                #         all_points_cropped.append(point)
-                
-                # all_points = np.array(all_points_cropped)
-                # print('croped_all_points', all_points.shape)
-                # print("obj_points", obj_points)
-                # fig = plt.figure()
-                # ax = fig.add_subplot(projection='3d')
-                # ax.scatter(all_points[:,0], all_points[:,1], all_points[:,2], c='green')
-                # ax.scatter(obj_points[:,0], obj_points[:,1], obj_points[:,2], c='red')
-                # plt.show()
+        # # out_1.write(color_image_1)
+        # cv2.imshow("Frame", frame)
+        # cv2.imshow("YOLO frame", frame_2)
+    
+        # # Press 'q' or 'esc' to break the loop
+        # if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
+        #     break
 
-                # obj = o3d.geometry.PointCloud()
-                # obj.points = o3d.utility.Vector3dVector(obj_points)
-                # pcl_colors = np.tile(np.array([1, 0, 0]), (len(obj_points),1))
-                # obj.colors = o3d.utility.Vector3dVector(pcl_colors)
+        obs_message = udp.ReadReceivedData()
+        if obs_message == "Segment":
+            print('\nSend the coordinates!!\n')
+            result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='Apple', sam_centroid=True,display_mask=True)
+            print("SAM")
 
-                # all = o3d.geometry.PointCloud()
-                # all.points = o3d.utility.Vector3dVector(all_points)
-                # all_colors = np.tile(np.array([0, 0, 1]), (len(all_points),1))
-                # all.colors = o3d.utility.Vector3dVector(all_colors)
-                # o3d.visualization.draw_geometries([all, obj])
-                
-                zs = obj_points[:,2]
-                z = np.median(zs)
-                xs = obj_points[:,0]
-                ys = obj_points[:,1]
-                ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background <-  #TODO Try removing
-                x_pos = np.median(xs)
-                y_pos = np.median(ys)
-                z_pos = z
+            frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
 
-                # print("x_pos, y_pos", x_pos, y_pos)
-
-### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
-                y_pos = -y_pos
-                x_pos = -x_pos
-
-
-                median_point = np.array([x_pos, y_pos, z_pos])
-
-                coord_list.append(median_point)
-
-            message = coord_list
+            cv2.imshow("Frame", frame)
         
-        print("Centroids : ", message)
-        print("Centroid list: ", centroid_list)
-        udp.SendData(str(message))  # Send the message
+            ## in a for loop:
+            coord_list = []
+            if len(centroid_list) == 0:
+                # message = None 
+                continue
+            else: 
+                prev_loc = []
+                for centroids in centroid_list:
+                    
+                    print("centroid: ", centroids[1], centroids[0], "area: ", centroids[2])
+                    obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
+                    # all_points = verts[:, :].reshape(-1, 3)
+                    # print('all_points', all_points.shape)
+                    # mean_point = np.mean(all_points, axis=0)
+                    # all_points_cropped = []
+                    # print("mean_point", mean_point)
+                    # for point in all_points:
+                    #     if np.linalg.norm(point - mean_point) < 1:
+                    #         all_points_cropped.append(point)
+                    
+                    # all_points = np.array(all_points_cropped)
+                    # print('croped_all_points', all_points.shape)
+                    # print("obj_points", obj_points)
+                    # fig = plt.figure()
+                    # ax = fig.add_subplot(projection='3d')
+                    # ax.scatter(all_points[:,0], all_points[:,1], all_points[:,2], c='green')
+                    # ax.scatter(obj_points[:,0], obj_points[:,1], obj_points[:,2], c='red')
+                    # plt.show()
 
-        cv2.imshow("Final frame", result_frame)
-        out_1.write(result_frame)
+                    # obj = o3d.geometry.PointCloud()
+                    # obj.points = o3d.utility.Vector3dVector(obj_points)
+                    # pcl_colors = np.tile(np.array([1, 0, 0]), (len(obj_points),1))
+                    # obj.colors = o3d.utility.Vector3dVector(pcl_colors)
+
+                    # all = o3d.geometry.PointCloud()
+                    # all.points = o3d.utility.Vector3dVector(all_points)
+                    # all_colors = np.tile(np.array([0, 0, 1]), (len(all_points),1))
+                    # all.colors = o3d.utility.Vector3dVector(all_colors)
+                    # o3d.visualization.draw_geometries([all, obj])
+                    
+                    zs = obj_points[:,2]
+                    z = np.median(zs)
+                    xs = obj_points[:,0]
+                    ys = obj_points[:,1]
+                    ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background <-  #TODO Try removing
+                    x_pos = np.median(xs)
+                    y_pos = np.median(ys)
+                    z_pos = z
+
+                    # print("x_pos, y_pos", x_pos, y_pos)
+
+    ### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
+                    y_pos = -y_pos
+                    x_pos = -x_pos
+
+                    median_point = np.array([x_pos, y_pos, z_pos, centroids[2]])
+
+                    coord_list.append(median_point)
+                    prev_loc = coord_list
+
+                message_good = True
+                for entry in coord_list:
+                    if np.any(np.isnan(entry)):
+                        message_good = False
+                        break
+
+                if message_good:
+                    message = coord_list
+
+                else:
+                    continue
+            
+            print("Centroids : ", message)
+            # print("Centroid list: ", centroid_list)
+            udp.SendData(str(message))  # Send the message
+
+            
         
+        if obs_message == "Segment":
+            for i in range(10):
+                out_1.write(result_frame)
+            cv2.imshow("Final frame", result_frame)
+            cv2.waitKey(1000)
+
         # Press 'q' or 'esc' to break the loop
         if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
             break
+
+        else:
+            out_1.write(color_image_1)
+            cv2.imshow("Final frame", color_image_1)
+            continue
        
     # Release resources and close the window
     out_1.release()
