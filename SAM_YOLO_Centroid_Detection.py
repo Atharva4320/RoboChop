@@ -96,9 +96,9 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	poi_area = poi[0]['area']
 
 	# print("POI_mask: ", poi_mask)
-	if poi_area <= (0.8*image_area):
-		poi_mask = poi_mask | poi[1]['segmentation']
-		poi_area += poi[1]['area']
+	# if poi_area <= (0.65*image_area):
+	# 	poi_mask = poi_mask | poi[1]['segmentation']
+	# 	poi_area += poi[1]['area']
 
 	cent_x, cent_y = get_centroid(poi_mask)
 

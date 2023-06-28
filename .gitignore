@@ -160,9 +160,12 @@ cython_debug/
 #.idea/
 
 # Ignore all files in the Models folder
-Models/*
+Models/
 *.pt
 
 # Ignore all files in .DS_Store
 **/.DS_Store
+
+# Ignore video file:
+Videos/
 
