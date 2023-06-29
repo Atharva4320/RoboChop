@@ -217,25 +217,19 @@ class SkillUtils():
 		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
 
+	def _intersects(self, bbox1, bbox2):
+		if (bbox1[0] <= bbox2[1] or bbox1[1] >= bbox2[0]) and (bbox1[2] <= bbox2[3] or bbox1[3] >= bbox2[2]):
+			return True
+		else:
+			return False
+		pass
+
 	def check_cut_collisions(self, blade_com, obj_dict, rotation):
 		"""
-		- if blade will come into contact with any object's bounding box
-		- just care about x,y position for detection, project into 2D space & if objects
-		  are touching there is a collision
-		- return the object indices that result in cutting collision
-		# Wx = 0.5*tool_dims[0]*math.sin(rotation)
-		# Wy = 0.5*tool_dims[0]*math.cos(rotation)
-
-		# x1 = blade_com[0] + Lx - Wx
-		# x2 = blade_com[0] + Lx + Wx
-		# x3 = blade_com[0] - Lx - Wx 
-		# x4 = blade_com[0] - Lx + Wx
-		# y1 = Ly - Wy
-		# y2 = Ly + Wy
+		- generate simple bounding box (4 corners) based on blade rotation
+		- iterate through obj_dict and check for collisions between blade and obj bounding boxes
+		- return list of obj_idxs that result in collisions of the bounding boxes
 		"""
-		# generate simple bounding box (4 corners) based on blade rotation
-		# iterate through obj_dict and check for collisions between blade and obj bounding boxes
-		# return list of obj_idxs that result in collisions of the bounding boxes
 		tool_dim = 0.16 # x,y in [m]
 		# NOTE: rotation expected in degrees
 		Lx = 0.5*tool_dim*math.cos(rotation)
@@ -248,9 +242,9 @@ class SkillUtils():
 
 		collision_idxs = []
 		for idx in obj_dict:
-			obj_bb = obj_dict[idx][3]
-			
-
+			obj_bb = obj_dict[idx][4]
+			if self._intersects(tool_bb, obj_bb):
+				collision_idxs.append(idx)
 		return collision_idxs
 
 	def _get_perp_vector(self, vec):
@@ -296,10 +290,3 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 		pose.rotation = og_rot
 		self.fa.goto_pose(pose)
-
-
-	def clear_area(self, com):
-		"""
-		function to check if there are nearby centroids within the designated radius, and push objects out of the way
-		"""
-		pass
