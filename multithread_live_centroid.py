@@ -170,7 +170,17 @@ def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
 				else: 
 					prev_loc = []
 					for centroids in centroid_list:
-							
+						
+						# centroids[0] -> centroid_x
+						# centroids[1] -> centroid_y
+						# centroids[2] -> mask_area
+						# centroids[3] -> bc[0]
+						# centroids[4] -> bc[1]
+						# centroids[5] -> bc[2]
+						# centroids[6] -> bc[3]
+						# centroids[7] -> lp_1
+						# centroids[8] -> lp_2
+
 						print("centroid: ", centroids[1], centroids[0], "area: ", centroids[2])
 						obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
 					

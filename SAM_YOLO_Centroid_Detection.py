@@ -65,6 +65,24 @@ def get_centroid(mask_segmentation):
 	return centroid_x, centroid_y
   
 
+def find_longest_line(contour):
+	contour = np.array(contour)
+	center = np.mean(contour, axis=0)  # Compute the center of the contour
+	max_distance = 0
+	point1 = None
+	point2 = None
+	for i in range(len(contour)):
+		p1 = contour[i]
+		for j in range(i + 1, len(contour)):
+			p2 = contour[j]
+			line_distance = np.abs(np.cross(p2 - p1, center - p1)) / np.linalg.norm(p2 - p1)
+			if line_distance > max_distance:
+				max_distance = line_distance
+				point1 = p1
+				point2 = p2
+	return point1, point2
+
+
 def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	"""
 	Generate the centroid of the target object in the image based on SAM (Segment Anything Model) segmentation.
@@ -109,6 +127,8 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	# Convert the mask to uint8 and find contours
 	contours, _ = cv2.findContours(poi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	
+	point1, point2 = find_longest_line(contours[0])  #TODO: FIX IT
+
 	# Create a filled colored mask and apply it to the image
 	color = (255, 165, 0) if not random_color else tuple(np.random.randint(0, 255, 3).tolist())
 	
@@ -132,7 +152,7 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	# Combine the masked foreground and the background
 	output_img = cv2.add(cv2.bitwise_and(img_, mask), cv2.bitwise_and(image, cv2.bitwise_not(mask)))
 
-	return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y, poi_area
+	return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y, poi_area, point1, point2
 
 
 
@@ -379,8 +399,8 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 			
 	elif sam_centroid:
 		for bc in box_coord:
-			frame, centroid_x, centroid_y, mask_area = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
-			cent_list.append([centroid_x, centroid_y, mask_area])
+			frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+			cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 		
 		return frame, cent_list if return_frame else cent_list
 			#cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
