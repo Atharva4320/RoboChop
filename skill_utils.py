@@ -275,5 +275,5 @@ class SkillUtils():
 		# goto intermediate z pose to then reset the gripper rotation
 		pose.translation = np.array([xy_push[0], xy_push[1], 0.25])
 		self.fa.goto_pose(pose)
-		pose.rotation = og_rot
+		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
