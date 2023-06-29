@@ -105,12 +105,14 @@ class SkillUtils():
 			y = obj[1]
 			z = obj[2]
 			area = obj[3]
+			bbox = obj[4]
+			pts = obj[5]
 			self.robot_pose = self.fa.get_pose()
 			com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 			# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
 			com = np.array([com[0], com[1] + 0.04, com[2] + 0.02]) # should be the x,y,z position in robot frame
 			print("COM: ", com)
-			obj_dict[i] = (com, area)
+			obj_dict[i] = (com, area, bbox, pts)
 		# return dictionary
 		return obs_objects, obj_dict
 	
@@ -139,7 +141,7 @@ class SkillUtils():
 		com = obj_dict[cut_idx][0]
 
 		# TODO: access the sides in obj_dict
-		sides = obj_dict[cut_idx][5]
+		sides = obj_dict[cut_idx][3]
 		# convert to world coordinates
 		pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[0][0],sides[0][1],sides[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 		pt1 = np.array([pt1[0], pt1[1] + 0.04]) 
@@ -228,7 +230,7 @@ class SkillUtils():
 
 		collision_idxs = []
 		for idx in obj_dict:
-			obj_bb = obj_dict[idx][4]
+			obj_bb = obj_dict[idx][2]
 			if self._intersects(tool_bb, obj_bb):
 				collision_idxs.append(idx)
 		return collision_idxs
