@@ -21,6 +21,7 @@ for key in n_pieces:
 	object_string+=','
 object_string = object_string[0:len(object_string)-1]
 print("object_string: ", object_string)
+
 udp.SendData(object_string)
 time.sleep(20) # TODO: determine how long we need to sleep here
 
@@ -37,25 +38,42 @@ obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
 print("entering loop....")
 count = obs_objects
 prev_cut_pos = np.array([0.65, 0, 0.4])
+object_list = list(n_pieces.keys())
 
-
-while skills.check_dict_values_greater(n_pieces, obs_objects):
-
-	# check if the expected count doesn't match the observed objects
-	if skills.check_dict_values_not_equal(count, obs_objects):
-		if skills.check_dict_values_greater(count, obs_objects):
-			skills.disturb_scene()
-			obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
-
+for object in object_list:
+	while n_pieces[object] > obs_objects[object]:
+		if count[object] != obs_objects[object]:
+			if count[object] > obs_objects[object]:
+				skills.disturb_scene()
+				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
+			else:
+				print("ERROR: we are incorrectly observing more objects than expected")
+				skills.disturb_scene()
+				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
 		else:
-			print("ERROR: we are incorrectly observing more objects than expected")
-			skills.disturb_scene()
-			obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
+			count = skills.cut_multiclass(obj_dict, count, object)
+print("Completing cutting task!")
+print("Final oberved object states: ", obs_objects)
 
-	# go to cut 
-	else:
-		count = skills.cut_multiclass(obj_dict)
-		obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
+
+# while skills.check_dict_values_greater(n_pieces, obs_objects):
+
+# 	# check if the expected count doesn't match the observed objects
+# 	if skills.check_dict_values_not_equal(count, obs_objects):
+# 		if skills.check_dict_values_greater(count, obs_objects):
+# 			skills.disturb_scene()
+# 			obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
+
+# 		else:
+# 			print("ERROR: we are incorrectly observing more objects than expected")
+# 			skills.disturb_scene()
+# 			obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
+
+# 	# go to cut 
+# 	else:
+# 		# TODO: ensure the cut skill is cutting the correct object
+# 		count = skills.cut_multiclass(obj_dict)
+# 		obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose)
 
 print("Completing cutting task!")
 print("Final oberved object states: ", obs_objects)

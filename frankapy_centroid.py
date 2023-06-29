@@ -17,8 +17,8 @@ print("\nReset pose...")
 fa = FrankaArm()
 fa.reset_pose()
 fa.reset_joints()
-reset_pose = fa.get_pose()
-reset_pose.translation = np.array([0.65, 0, 0.4]) # x was 0.55 before
+reset_pose = fa.get_pose() # [0.65, 0, 0.4]
+reset_pose.translation = np.array([0.625, 0, 0.45]) # x was 0.55 before
 
 skills = SkillUtils(fa)
 obs_objects, obj_dict = skills.observe_scene(udp, reset_pose)
@@ -51,7 +51,19 @@ while n_pieces > obs_objects:
 
 	# go to cut 
 	else:
-		count = skills.cut(obj_dict, count)
+		# get cut centroid
+		com, angle = skills.plan_cut(obj_dict)
+		collisions = skills.check_cut_collisions(com, obj_dict, angle)
+		# check for collisions
+		while len(collisions > 0):
+			for idx in collisions:
+				push_obj_com = obj_dict[idx][0]
+				print("\nPush obj com -- should just be x,y: ", push_obj_com)
+				skills.push(com, push_obj_com)
+			obs_objects, obj_dict = skills.observe_scene(udp, reset_pose)
+			collisions = skills.check_cut_collisions(com, obj_dict, angle)
+		# when no collisions, execute cut action
+		count = skills.cut(count, com, angle)
 		obs_objects, obj_dict = skills.observe_scene(udp, reset_pose)
 
 print("Completing cutting task!")
