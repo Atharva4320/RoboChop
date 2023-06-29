@@ -36,18 +36,6 @@ class SkillUtils():
 				area_idx = idx
 		return area_idx
 	
-	# def get_largest_area_idx_multiclass(self, dict):
-	# 	largest_area = float('-inf')
-	# 	area_idx = None
-	# 	key = None
-	# 	for elem in dict:
-	# 		for idx, (_, area) in dict.get(elem).items():
-	# 			if area > largest_area:
-	# 				largest_area = area
-	# 				area_idx = idx
-	# 				key = elem
-	# 	return key, area_idx
-	
 	def observe_scene_multiclass(self, udp, obs_pose):
 		# goto observation pose
 		print("\nGo to observation pose...")
@@ -94,7 +82,6 @@ class SkillUtils():
 		print("\nGo to observation pose...")
 		self.fa.goto_pose(obs_pose)
 		time.sleep(0.5)
-		
 		# send message
 		udp.SendData("Segment")
 		print("Sent message...")
@@ -118,15 +105,12 @@ class SkillUtils():
 			y = obj[1]
 			z = obj[2]
 			area = obj[3]
-
 			self.robot_pose = self.fa.get_pose()
 			com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-
 			# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
 			com = np.array([com[0], com[1] + 0.04, com[2] + 0.02]) # should be the x,y,z position in robot frame
 			print("COM: ", com)
 			obj_dict[i] = (com, area)
-		
 		# return dictionary
 		return obs_objects, obj_dict
 	
@@ -151,17 +135,21 @@ class SkillUtils():
 		return count
 	
 	def plan_cut(self, obj_dict):
-		# return com with the largest area
-		# return angle perpendicular to longest length of object\
 		cut_idx = self.get_largest_area_idx(obj_dict)
 		com = obj_dict[cut_idx][0]
 
-		# TODO: access the contour in obj_dict
-		# contour = obj_dict[idx][2]
-		# find longest length of contour and get vector
+		# TODO: access the sides in obj_dict
+		sides = obj_dict[cut_idx][5]
+		# convert to world coordinates
+		pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[0][0],sides[0][1],sides[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+		pt1 = np.array([pt1[0], pt1[1] + 0.04]) 
+		pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[1][0],sides[1][1],sides[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+		pt2 = np.array([pt2[0], pt2[1] + 0.04]) 
 		# find perpendicular vector
+		vec = pt2 - pt1
+		perp_vector = self._get_perp_vector(vec)
 		# get rotation of the gripper
-		angle = None
+		angle = math.degrees(math.arctan(perp_vector[1] / perp_vector[0]))
 		return com, angle
 
 	def cut(self, count, com, angle):
@@ -220,9 +208,7 @@ class SkillUtils():
 	def _intersects(self, bbox1, bbox2):
 		if (bbox1[0] <= bbox2[1] or bbox1[1] >= bbox2[0]) and (bbox1[2] <= bbox2[3] or bbox1[3] >= bbox2[2]):
 			return True
-		else:
-			return False
-		pass
+		return False
 
 	def check_cut_collisions(self, blade_com, obj_dict, rotation):
 		"""
@@ -269,8 +255,7 @@ class SkillUtils():
 		perp_vector = self._get_perp_vector(dir_vector)
 		rot_angle = math.degrees(math.arctan(perp_vector[1] / perp_vector[0]))
 		pose = self.fa.get_pose()
-		og_rot = pose.rotation
-		rot_matrix = self._get_rot_matrix(og_rot, rot_angle) 
+		rot_matrix = self._get_rot_matrix(self.og_rotation, rot_angle) 
 		# rotate blade for push angle
 		pose = self.fa.get_pose()
 		pose.rotation = rot_matrix
