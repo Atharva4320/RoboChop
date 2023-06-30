@@ -30,7 +30,7 @@ class SkillUtils():
 	def get_largest_area_idx(self, dict):
 		largest_area = float('-inf')
 		area_idx = None
-		for idx, (_, area) in dict.items():
+		for idx, (_, area, _, _) in dict.items():
 			if area > largest_area:
 				largest_area = area
 				area_idx = idx
@@ -66,7 +66,7 @@ class SkillUtils():
 				self.robot_pose = self.fa.get_pose()
 				com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 				# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
-				com = np.array([com[0], com[1] + 0.04, com[2] + 0.02]) # should be the x,y,z position in robot frame
+				com = np.array([com[0], com[1] + 0.065, com[2] + 0.02]) # should be the x,y,z position in robot frame
 				print("COM: ", com)
 				key_dict[i] = (com, area)
 				i+=1
@@ -105,12 +105,12 @@ class SkillUtils():
 			y = obj[1]
 			z = obj[2]
 			area = obj[3]
-			bbox = obj[4]
-			pts = obj[5]
+			bbox = [[obj[4], obj[5], obj[6]], [obj[7], obj[8], obj[9]]]
+			pts = [[obj[10], obj[11], obj[12]], [obj[13], obj[14], obj[15]]]
 			self.robot_pose = self.fa.get_pose()
 			com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 			# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
-			com = np.array([com[0], com[1] + 0.04, com[2] + 0.02]) # should be the x,y,z position in robot frame
+			com = np.array([com[0], com[1] + 0.065, com[2] + 0.02]) # should be the x,y,z position in robot frame
 			print("COM: ", com)
 			obj_dict[i] = (com, area, bbox, pts)
 		# return dictionary
@@ -137,21 +137,25 @@ class SkillUtils():
 		return count
 	
 	def plan_cut(self, obj_dict):
+		"""
+		Observed offset:
+		0.025 in y (too much <-- which is -y)
+		"""
 		cut_idx = self.get_largest_area_idx(obj_dict)
 		com = obj_dict[cut_idx][0]
 
 		# TODO: access the sides in obj_dict
-		sides = obj_dict[cut_idx][3]
+		sides = obj_dict[cut_idx][3] # [[x1, y1, z1], [x2, y2, z2]]
 		# convert to world coordinates
 		pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[0][0],sides[0][1],sides[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-		pt1 = np.array([pt1[0], pt1[1] + 0.04]) 
+		pt1 = np.array([pt1[0], pt1[1] + 0.065]) 
 		pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[1][0],sides[1][1],sides[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-		pt2 = np.array([pt2[0], pt2[1] + 0.04]) 
+		pt2 = np.array([pt2[0], pt2[1] + 0.065]) 
 		# find perpendicular vector
 		vec = pt2 - pt1
 		perp_vector = self._get_perp_vector(vec)
 		# get rotation of the gripper
-		angle = math.degrees(math.arctan(perp_vector[1] / perp_vector[0]))
+		angle = math.degrees(math.atan(perp_vector[1] / perp_vector[0]))
 		return com, angle
 
 	def cut(self, count, com, angle):
@@ -162,18 +166,23 @@ class SkillUtils():
 		self.prev_cut_angle = angle
 		# goto com with offset
 		pose.translation = np.array([com[0], com[1], com[2] + 0.10])
-		pose.rotation = rot
+		# pose.rotation = rot
+		# self.fa.goto_pose(pose)
+		# time.sleep(0.5)
 		self.fa.goto_pose(pose)
-		# self.robot_pose.translation = np.array([com[0], com[1], com[2] + 0.10])
-		# self.fa.goto_pose(self.robot_pose)
-		time.sleep(0.5)
+		assert False
 
 		# Executing cutting action
 		print("\nCutting...")
 		self.fa.goto_gripper(0, block=False)
 		# cut action
 		# TODO: specify max height with object height
-		self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
+		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
+
+
+
+
+
 		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
 		time.sleep(1)
 		count += 1
@@ -208,9 +217,23 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 
 	def _intersects(self, bbox1, bbox2):
-		if (bbox1[0] <= bbox2[1] or bbox1[1] >= bbox2[0]) and (bbox1[2] <= bbox2[3] or bbox1[3] >= bbox2[2]):
+		# bbox1 = [[x1, y1], [x2, y2]]
+		# bbox2 = [[x1, y1], [x2, y2]]
+		# print("bbox1: ", bbox1)
+		# print("bbox2: ", bbox2)
+		# print(bbox1[0][0])
+		# print(bbox1[0][1])
+		# print(bbox1[1][0])
+		# print(bbox1[1][1])
+		if (bbox1[0][1] < bbox2[1][1]) or (bbox1[0][0] < bbox2[1][0]):
+			return False
+		elif (bbox1[1][0] > bbox2[0][0]) or (bbox1[1][1] > bbox2[0][1]):
+			return False
+		else:
 			return True
-		return False
+		# if ((bbox1[0][0] <= bbox2[1][0]) or (bbox1[1][0] >= bbox2[0][0])) and ((bbox1[0][1] <= bbox2[1][1]) or (bbox1[1][1] >= bbox2[0][1])):
+		# 	return True
+		# return False
 
 	def check_cut_collisions(self, blade_com, obj_dict, rotation):
 		"""
@@ -226,18 +249,23 @@ class SkillUtils():
 		x2 = blade_com[0] + Lx
 		y1 = blade_com[1] - Ly
 		y2 = blade_com[1] + Ly
-		tool_bb = (x1, x2, y1, y2)
+		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
 
 		collision_idxs = []
 		for idx in obj_dict:
-			obj_bb = obj_dict[idx][2]
+			bb_cam_frame = obj_dict[idx][2]
+			pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[0][0],bb_cam_frame[0][1],bb_cam_frame[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+			l1 = [pt1[0], pt1[1] + 0.065]
+			pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[1][0],bb_cam_frame[1][1],bb_cam_frame[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+			l2 = [pt2[0], pt2[1] + 0.065]
+			obj_bb = [l1, l2]
 			if self._intersects(tool_bb, obj_bb):
 				collision_idxs.append(idx)
 		return collision_idxs
 
 	def _get_perp_vector(self, vec):
 		unit = np.array([vec[1], -vec[0]])
-		unit = unit / np.linal.norm(unit)
+		unit = unit / np.linalg.norm(unit)
 		return unit
 	
 	def _get_rot_matrix(self, starting_rot, z_rot):
