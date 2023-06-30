@@ -555,6 +555,7 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	point2 = [point2[0] + x1, point2[1] + y1]
 
 	frame = draw_circle_centroid(frame, sam_centX, sam_centY, mask_area, (0, 255, 0))
+	frame = draw_dotted_line(frame, point1, point2, color=(0,255,0))
 	
 	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2
 
@@ -624,6 +625,21 @@ def draw_circle_centroid(frame, centX, centY, area, color):
 	cv2.putText(frame, coordinates_text, (centX - 50, centY - 10), font, size, color, thickness)
 	return frame
 
+#TODO: Function defination
+def draw_dotted_line(img, pt1, pt2, color, thickness=2, gap=5):
+    dist =((pt1[0]-pt2[0])**2+(pt1[1]-pt2[1])**2)**.5
+    pts= []
+    for i in  np.arange(0,dist,gap):
+        r=i/dist
+        x=int((1-r)*pt1[0]+r*pt2[0])
+        y=int((1-r)*pt1[1]+r*pt2[1])
+        p = (x,y)
+        pts.append(p)
+
+    if len(pts) > 0:
+        for i in range(0,len(pts)-1):
+            cv2.line(img, pts[i], pts[i+1], color, thickness)
+    return img
 
 
 if __name__ == '__main__':
