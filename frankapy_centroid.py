@@ -51,11 +51,12 @@ while n_pieces > obs_objects:
 
 	# go to cut 
 	else:
-		# get cut centroid
+		# plan cut action (get com and angle)
 		com, angle = skills.plan_cut(obj_dict)
 		collisions = skills.check_cut_collisions(com, obj_dict, angle)
 		# check for collisions
-		while len(collisions > 0):
+		while len(collisions) > 0:
+			print("Found ", len(collisions), " collisions")
 			for idx in collisions:
 				push_obj_com = obj_dict[idx][0]
 				print("\nPush obj com -- should just be x,y: ", push_obj_com)
@@ -63,6 +64,7 @@ while n_pieces > obs_objects:
 			obs_objects, obj_dict = skills.observe_scene(udp, reset_pose)
 			collisions = skills.check_cut_collisions(com, obj_dict, angle)
 		# when no collisions, execute cut action
+		print("No found collisions")
 		count = skills.cut(count, com, angle)
 		obs_objects, obj_dict = skills.observe_scene(udp, reset_pose)
 
