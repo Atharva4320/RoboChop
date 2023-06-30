@@ -65,24 +65,51 @@ def get_centroid(mask_segmentation):
 	return centroid_x, centroid_y
   
 
-def find_longest_line(contour):
-	contour = np.array(contour)
+def find_longest_line(contour, centroid):
+	# contour = np.array(contour)
 	center = np.mean(contour, axis=0)  # Compute the center of the contour
 	max_distance = 0
 	point1 = None
 	point2 = None
+	ind = 0
 	for i in range(len(contour)):
-		p1 = contour[i]
-		for j in range(i + 1, len(contour)):
-			p2 = contour[j]
-			line_distance = np.abs(np.cross(p2 - p1, center - p1)) / np.linalg.norm(p2 - p1)
-			if line_distance > max_distance:
-				max_distance = line_distance
-				point1 = p1 # [x,y]
-				point2 = p2 # [x,y]
+		p1 = contour[i] # <- should be x1, y1
+		distance = 2 * (((p1[0] - centroid[0])**2 + (p1[1] - centroid[1])**2) ** .5)
+		if distance > max_distance:
+			max_distance = distance
+			ind = i
+	x1 = contour[ind, 0]
+	y1 = contour[ind, 1]
+	x2 = 2 * centroid[0] - x1
+	y2 = 2 * centroid[1] - y1
 
-	print("Points: ", point1, point2)
-	return point1[0], point2[0]
+	return [x1, y1], [x2, y2]
+
+
+		# slope_1 = (centroid[1] - p1[1]) / (centroid[0] - p1[0])
+		# for j in range(len(contour)):
+		# 	p2 = contour[j]
+		# 	if p1 == p2:
+		# 		continue
+		# 	slope_2 = (centroid[1] - p1[1]) / (centroid[0] - p1[0])
+
+		# get unit vector from p1 to center
+		# find p2 (point on opposite side) in direction of unit vector
+		# get dist
+
+
+
+
+		# for j in range(i + 1, len(contour)):
+		# 	p2 = contour[j]
+		# 	line_distance = np.abs(np.cross(p2 - p1, center - p1)) / np.linalg.norm(p2 - p1)
+		# 	if line_distance > max_distance:
+		# 		max_distance = line_distance
+		# 		point1 = p1 # [x,y]
+		# 		point2 = p2 # [x,y]
+
+	# print("Points: ", point1, point2)
+	return point1, point2
 
 
 def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
@@ -129,7 +156,18 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	# Convert the mask to uint8 and find contours
 	contours, _ = cv2.findContours(poi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	
-	point1, point2 = find_longest_line(contours[0])  #TODO: FIX IT LATER
+	cont = contours[0].reshape(contours[0].shape[0], 2)
+	point1, point2 = find_longest_line(cont, [cent_x, cent_y])  #TODO: FIX IT LATER
+	# cv2.imshow("Mask", poi_mask)
+	# cv2.waitKey(1000)
+	# print(len(contours))
+	print(cont)
+	print(cont.shape)
+	img_cp = image.copy()
+
+	# cv2.drawContours(img_cp, contours[0], -1, (0, 255, 0), 3)
+	# cv2.imshow("Contours", img_cp)
+	# cv2.waitKey()
 
 	# Create a filled colored mask and apply it to the image
 	color = (255, 165, 0) if not random_color else tuple(np.random.randint(0, 255, 3).tolist())
@@ -555,7 +593,9 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	point2 = [point2[0] + x1, point2[1] + y1]
 
 	frame = draw_circle_centroid(frame, sam_centX, sam_centY, mask_area, (0, 255, 0))
-	frame = draw_dotted_line(frame, point1, point2, color=(0,255,0))
+	frame = cv2.line(frame, point1, point2, (255, 0, 0), thickness=3)
+	# frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, (255, 0, 0))
+	# frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, (255, 0, 0))
 	
 	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2
 
@@ -626,20 +666,9 @@ def draw_circle_centroid(frame, centX, centY, area, color):
 	return frame
 
 #TODO: Function defination
-def draw_dotted_line(img, pt1, pt2, color, thickness=2, gap=5):
-    dist =((pt1[0]-pt2[0])**2+(pt1[1]-pt2[1])**2)**.5
-    pts= []
-    for i in  np.arange(0,dist,gap):
-        r=i/dist
-        x=int((1-r)*pt1[0]+r*pt2[0])
-        y=int((1-r)*pt1[1]+r*pt2[1])
-        p = (x,y)
-        pts.append(p)
-
-    if len(pts) > 0:
-        for i in range(0,len(pts)-1):
-            cv2.line(img, pts[i], pts[i+1], color, thickness)
-    return img
+# def draw_longest_line(img, pt1, pt2, color, thickness=10, gap=1):
+#     cv2.line(img, pt1, )
+#     return img
 
 
 if __name__ == '__main__':
