@@ -143,8 +143,6 @@ class SkillUtils():
 		"""
 		cut_idx = self.get_largest_area_idx(obj_dict)
 		com = obj_dict[cut_idx][0]
-
-		# TODO: access the sides in obj_dict
 		sides = obj_dict[cut_idx][3] # [[x1, y1, z1], [x2, y2, z2]]
 		# convert to world coordinates
 		pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[0][0],sides[0][1],sides[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
@@ -166,23 +164,16 @@ class SkillUtils():
 		self.prev_cut_angle = angle
 		# goto com with offset
 		pose.translation = np.array([com[0], com[1], com[2] + 0.10])
-		# pose.rotation = rot
-		# self.fa.goto_pose(pose)
-		# time.sleep(0.5)
+		pose.rotation = rot
 		self.fa.goto_pose(pose)
-		assert False
+		time.sleep(0.5)
 
 		# Executing cutting action
 		print("\nCutting...")
 		self.fa.goto_gripper(0, block=False)
 		# cut action
 		# TODO: specify max height with object height
-		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
-
-
-
-
-
+		self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
 		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
 		time.sleep(1)
 		count += 1

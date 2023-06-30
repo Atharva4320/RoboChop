@@ -51,9 +51,8 @@ while n_pieces > obs_objects:
 
 	# go to cut 
 	else:
-		# get cut centroid
+		# plan cut action (get com and angle)
 		com, angle = skills.plan_cut(obj_dict)
-
 		collisions = skills.check_cut_collisions(com, obj_dict, angle)
 		# check for collisions
 		while len(collisions) > 0:
