@@ -86,9 +86,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_10.mp4')
-	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_10.mp4')
-	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_10.mp4')
+	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_11.mp4')
+	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_11.mp4')
+	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_11.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -174,12 +174,12 @@ def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
 						# centroids[0] -> centroid_x
 						# centroids[1] -> centroid_y
 						# centroids[2] -> mask_area
-						# centroids[3] -> bc[0]
-						# centroids[4] -> bc[1]
-						# centroids[5] -> bc[2]
-						# centroids[6] -> bc[3]
-						# centroids[7] -> lp_1
-						# centroids[8] -> lp_2
+						# centroids[3] -> bc[0] -> x1
+						# centroids[4] -> bc[1] -> y1
+						# centroids[5] -> bc[2] -> x2
+						# centroids[6] -> bc[3] -> y2
+						# centroids[7] -> lp_1 -> [x,y]
+						# centroids[8] -> lp_2 -> [x,y]
 
 						print("centroid: ", centroids[1], centroids[0], "area: ", centroids[2])
 						obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
@@ -193,21 +193,34 @@ def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
 						y_pos = np.median(ys)
 						z_pos = z
 
+						corner1 = verts[int(centroids[4]), int(centroids[3])].reshape(-1,3)
+						corner2 = verts[int(centroids[6]), int(centroids[5])].reshape(-1,3)
+						
+						# print(centroids[7])
+
+						lp1 = verts[int(centroids[7][1]), int(centroids[7][0])].reshape(-1,3)
+						lp2 = verts[int(centroids[8][1]), int(centroids[8][0])].reshape(-1,3)
+
 						# print("x_pos, y_pos", x_pos, y_pos)
 
 		### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
 						y_pos = -y_pos
 						x_pos = -x_pos
 
-						median_point = np.array([x_pos, y_pos, z_pos, centroids[2]])
+						median_point = np.array([x_pos, y_pos, z_pos, centroids[2], corner1[:, 0][0], corner1[:, 1][0], corner1[:, 2][0], corner2[:, 0][0], corner2[:, 1][0],
+			       corner2[:, 2][0], lp1[:, 0][0], lp1[:, 1][0], lp1[:, 2][0], lp2[:, 0][0], lp2[:, 1][0], lp2[:, 2][0]])
+						
+						print("\nPoints to append: ", median_point)
 
 						coord_list.append(median_point)
 						prev_loc = coord_list
 
 					message_good = True
 					for entry in coord_list:
+						print("Entry: ", entry)
 						if np.any(np.isnan(entry)):
 							message_good = False
+							print("Got a 'nan' value!")
 							break
 
 					if message_good:

@@ -78,9 +78,11 @@ def find_longest_line(contour):
 			line_distance = np.abs(np.cross(p2 - p1, center - p1)) / np.linalg.norm(p2 - p1)
 			if line_distance > max_distance:
 				max_distance = line_distance
-				point1 = p1
-				point2 = p2
-	return point1, point2
+				point1 = p1 # [x,y]
+				point2 = p2 # [x,y]
+
+	print("Points: ", point1, point2)
+	return point1[0], point2[0]
 
 
 def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
@@ -127,7 +129,7 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	# Convert the mask to uint8 and find contours
 	contours, _ = cv2.findContours(poi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	
-	point1, point2 = find_longest_line(contours[0])  #TODO: FIX IT
+	point1, point2 = find_longest_line(contours[0])  #TODO: FIX IT LATER
 
 	# Create a filled colored mask and apply it to the image
 	color = (255, 165, 0) if not random_color else tuple(np.random.randint(0, 255, 3).tolist())
@@ -385,7 +387,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 	else:
 		frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
 
-	# Handle zero coordinates
+	# Handle zero coordinatescent_x, cent_y, poi_area,
 	if len(box_coord) == 0:
 		return handle_zero_coordinates(frame, return_frame)
 	
@@ -538,20 +540,23 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	# This function calculates the centroid using sam method
 
 	cropped_img = frame[y1:y2, x1:x2]#[y1-10:y2+10, x1-10:x2+10]
-	start_time_sam = time.time()
+	# start_time_sam = time.time()
 	cropped_mask = mask_generator.generate(cropped_img)
-	end_time_sam = time.time()
+	# end_time_sam = time.time()
 	# print("Time elapsed SAM: {}s".format(np.abs(end_time_sam - start_time_sam)))
-	cropped_mask_img, cent_x, cent_y, mask_area = generate_SAM_centroid(cropped_img, cropped_mask)
+	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_img, cropped_mask)
 
 
 	if display_mask:
 		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR) #[10:y2+10-y1, 10:x2+10-x1], cv2.COLOR_RGB2BGR)
 	sam_centX, sam_centY = cent_x + x1, cent_y + y1
 
+	point1 = [point1[0] + x1, point1[1] + y1]
+	point2 = [point2[0] + x1, point2[1] + y1]
+
 	frame = draw_circle_centroid(frame, sam_centX, sam_centY, mask_area, (0, 255, 0))
 	
-	return frame, int(sam_centX), int(sam_centY), mask_area
+	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2
 
 
 
