@@ -86,9 +86,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_11.mp4')
-	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_11.mp4')
-	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_11.mp4')
+	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_12.mp4')
+	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_12.mp4')
+	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_12.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -145,7 +145,7 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 			 
 
 #TODO: SAM LOOP
-def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
+def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 	 
 	 while True:
 			if not img_queue.empty():
@@ -155,7 +155,7 @@ def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
 				# SAM STUFF HERE
 				print('\nSend the coordinates!!\n')
 
-				result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='Apple', sam_centroid=True,display_mask=True)
+				result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
 				# print("SAM")
 
 				# frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
@@ -163,14 +163,18 @@ def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
 				# cv2.imshow("Frame", frame)
 				
 				## in a for loop:
-				coord_list = []
-				if len(centroid_list) == 0:
-					# message = None 
-					continue
-				else: 
-					prev_loc = []
-					for centroids in centroid_list:
-						
+				message_list = []
+				print("Retuning to SAM loop after getting the centroid lists...")
+				for i in range(len(target_list)):
+					coord_list = []
+					if len(centroid_list[i]) == 0:
+						message_list.append(coord_list)
+						# message = None 
+						continue
+					else: 
+						prev_loc = []
+						for centroids in centroid_list[i]:
+							
 						# centroids[0] -> centroid_x
 						# centroids[1] -> centroid_y
 						# centroids[2] -> mask_area
@@ -181,55 +185,73 @@ def SAM_loop(img_queue, verts_queue, mask_queue, udp, YOLO, SAM):
 						# centroids[7] -> lp_1 -> [x,y]
 						# centroids[8] -> lp_2 -> [x,y]
 
-						print("centroid: ", centroids[1], centroids[0], "area: ", centroids[2])
-						obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
-					
-						zs = obj_points[:,2]
-						z = np.median(zs)
-						xs = obj_points[:,0]
-						ys = obj_points[:,1]
-						ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background <-  #TODO Try removing
-						x_pos = np.median(xs)
-						y_pos = np.median(ys)
-						z_pos = z
-
-						corner1 = verts[int(centroids[4]), int(centroids[3])].reshape(-1,3)
-						corner2 = verts[int(centroids[6]), int(centroids[5])].reshape(-1,3)
+							print(f"\ncentroid: ({centroids[1]}, {centroids[0]})", "area: ", centroids[2])
+							obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
 						
-						# print(centroids[7])
+							zs = obj_points[:,2]
+							z = np.median(zs)
+							xs = obj_points[:,0]
+							ys = obj_points[:,1]
+							ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background <-  #TODO Try removing
+							x_pos = np.median(xs)
+							y_pos = np.median(ys)
+							z_pos = z
 
-						lp1 = verts[int(centroids[7][1]), int(centroids[7][0])].reshape(-1,3)
-						lp2 = verts[int(centroids[8][1]), int(centroids[8][0])].reshape(-1,3)
-
-						# print("x_pos, y_pos", x_pos, y_pos)
-
-		### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
-						y_pos = -y_pos
-						x_pos = -x_pos
-
-						median_point = np.array([x_pos, y_pos, z_pos, centroids[2], corner1[:, 0][0], corner1[:, 1][0], corner1[:, 2][0], corner2[:, 0][0], corner2[:, 1][0],
-			       corner2[:, 2][0], lp1[:, 0][0], lp1[:, 1][0], lp1[:, 2][0], lp2[:, 0][0], lp2[:, 1][0], lp2[:, 2][0]])
+							corner1 = verts[int(centroids[4]), int(centroids[3])].reshape(-1,3)
+							corner2 = verts[int(centroids[6]), int(centroids[5])].reshape(-1,3)
 						
-						print("\nPoints to append: ", median_point)
+							# print(centroids[7])
 
-						coord_list.append(median_point)
-						prev_loc = coord_list
+							lp1 = verts[int(centroids[7][1]), int(centroids[7][0])].reshape(-1,3)
+							lp2 = verts[int(centroids[8][1]), int(centroids[8][0])].reshape(-1,3)
 
-					message_good = True
-					for entry in coord_list:
-						print("Entry: ", entry)
-						if np.any(np.isnan(entry)):
-							message_good = False
-							print("Got a 'nan' value!")
-							break
+							# print("x_pos, y_pos", x_pos, y_pos)
 
+			### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
+							y_pos = -y_pos
+							x_pos = -x_pos
+
+							median_point = np.array([x_pos, y_pos, z_pos, centroids[2], corner1[:, 0][0], corner1[:, 1][0], corner1[:, 2][0], corner2[:, 0][0], corner2[:, 1][0],
+					corner2[:, 2][0], lp1[:, 0][0], lp1[:, 1][0], lp1[:, 2][0], lp2[:, 0][0], lp2[:, 1][0], lp2[:, 2][0]])
+							
+							# print("Points to append: ", median_point)
+
+							coord_list.append(median_point.tolist())
+							prev_loc = coord_list
+					# print("Coord List: ", coord_list)
+					message_list.append(coord_list)
+
+				message_good = True
+				for j in range(len(target_list)):
 					if message_good:
-						message = coord_list
-
+						for entry in message_list[j]:
+							# print("Entry: ", entry)
+							if np.any(np.isnan(entry)):
+								message_good = False
+								print("Got a 'nan' value!")
+								break
 					else:
-						continue
-				
-				print("Centroids : ", message)
+						break
+
+				if message_good:
+					msg_dict = {}
+					for n in range(len(target_list)):
+						msg_dict[target_list[n]] = message_list[n]
+						# msg = str(target_list[n] + ":" +str(message_list[n]))
+						# print(msg)
+
+						# msg_string += 
+					# print("Expected size of msg list: ", len(target_list), " Actual size of msg list: ", len(message_list))
+					message = message_list
+
+				else:
+					continue
+
+				print("\nMessage dictionary:")
+				print(msg_dict)
+			
+				# print("Items found: ", len(message_list))
+				print("\nMessage Sent:\n", message)
 				# print("Centroid list: ", centroid_list)
 				udp.SendData(str(message))  # Send the message
 				mask_queue.put(result_frame)
@@ -280,12 +302,21 @@ if __name__ == '__main__':
 	else:
 		print("The file does not exits.")
 
+	while True:
+		init_msg = udp.ReadReceivedData()
+		if init_msg is not None:
+			target_list = init_msg.split(',')
+			print(target_list)
+			break
+
+	# assert False
+
 	img_queue = queue.Queue()
 	verts_queue = queue.Queue()
 	mask_queue = queue.Queue()
 
-	vision = threading.Thread(target=vision_loop, args=(img_queue, verts_queue, mask_queue, udp))
-	mask_sam = threading.Thread(target=SAM_loop, args=(img_queue, verts_queue, mask_queue, udp, YOLO, SAM))
+	vision = threading.Thread(target=vision_loop, args=(img_queue, verts_queue, mask_queue,  udp))
+	mask_sam = threading.Thread(target=SAM_loop, args=(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM))
 
 	vision.start()
 	mask_sam.start()

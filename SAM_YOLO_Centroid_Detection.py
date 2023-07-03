@@ -161,9 +161,9 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	# cv2.imshow("Mask", poi_mask)
 	# cv2.waitKey(1000)
 	# print(len(contours))
-	print(cont)
-	print(cont.shape)
-	img_cp = image.copy()
+	# print(cont)
+	# print(cont.shape)
+	# img_cp = image.copy()
 
 	# cv2.drawContours(img_cp, contours[0], -1, (0, 255, 0), 3)
 	# cv2.imshow("Contours", img_cp)
@@ -252,33 +252,37 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	classes = detections[:, 5]
 	names = np.array([result.names[class_idx] for class_idx in classes])
 
-	indices = np.where(names == target_class)[0]  # Search for target object
+	#TODO: Multiple target objects
+	bbox_target_list = []
+	for target_name in target_class:
+		indices = np.where(names == target_name)[0]  # Search for target object
 
-	# print("Indices: ", indices, target_class)
-	# print(len(indices))
+		# print("Indices: ", indices, target_class)
+		# print(len(indices))
 
-	# print("ALL")
-	# print("Boxes: ", boxes, type(boxes))
-	# print("Scores: ", scores, type(scores))
-	# print("Classes: ", classes, type(classes))
-	# print("Names: ", names, type(names))
+		# print("ALL")
+		# print("Boxes: ", boxes, type(boxes))
+		# print("Scores: ", scores, type(scores))
+		# print("Classes: ", classes, type(classes))
+		# print("Names: ", names, type(names))
+		# print(target_name, indices)
+		if len(indices) != 0:  # Found a target object
+			
+			# print("TARGET")
+			# print("Boxes: ", boxes[indices], type(boxes))
+			# print("Scores: ", scores[indices], type(scores))
+			# print("Classes: ", classes[indices], type(classes))
+			# print("Names: ", names[indices], type(names))
 
-	if len(indices) != 0:  # Found a target object
-		
-		# print("TARGET")
-		# print("Boxes: ", boxes[indices], type(boxes))
-		# print("Scores: ", scores[indices], type(scores))
-		# print("Classes: ", classes[indices], type(classes))
-		# print("Names: ", names[indices], type(names))
-
-		keep = nms(torch.from_numpy(boxes[indices]), torch.from_numpy(scores[indices]), iou_threshold=0.5)
-
-		# print("Keep: ", keep.numpy())
-		# print("Boxes to keep:", boxes[keep.numpy()].astype(int).tolist())
-
-		return image, boxes[keep.numpy()].astype(int).tolist()
-	else:
-		return image, []
+			keep = nms(torch.from_numpy(boxes[indices]), torch.from_numpy(scores[indices]), iou_threshold=0.5)
+			bbox_target_list.append(boxes[keep.numpy()].astype(int).tolist())
+			# print("Keep: ", keep.numpy())
+			# print("Boxes to keep:", boxes[keep.numpy()].astype(int).tolist())
+		else:
+			bbox_target_list.append([])
+	# print("In detect_objects() function:")
+	# print("Returned bounding boxes: ", bbox_target_list)
+	return image, bbox_target_list
 
 	# # print(result.boxes.data.cpu().numpy(), type(result.boxes.data.cpu().numpy()))
 
@@ -423,26 +427,34 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
 		return frame, []
 	else:
+		# print("Classes to detect: ", len(poi))
 		frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
 
 	# Handle zero coordinatescent_x, cent_y, poi_area,
 	if len(box_coord) == 0:
 		return handle_zero_coordinates(frame, return_frame)
 	
-	cent_list = []
+	cent_list_per_item = []
+	
 	# Calculate centroid based on the method selected
 	if yolo_centroid:
+		cent_list = []
 		for bc in box_coord:
 			frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, bc[0], bc[1], bc[2], bc[3])
 			cent_list.append([centroid_x, centroid_y])
 		return frame, cent_list if return_frame else cent_list
 			
 	elif sam_centroid:
-		for bc in box_coord:
-			frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
-			cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
-		
-		return frame, cent_list if return_frame else cent_list
+		for i in range(len(box_coord)):
+			cent_list = []
+			for bc in box_coord[i]:
+				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
+			cent_list_per_item.append(cent_list)
+		# print("In calculate_centroid() function:")
+		# print("Target list size: ", len(poi), " Actual size of returned items: ", len(cent_list_per_item))
+		# print(cent_list_per_item)
+		return frame, cent_list_per_item if return_frame else cent_list_per_item
 			#cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
 			#cv2.waitKey(0)
 			#cv2.destroyAllWindows()  
