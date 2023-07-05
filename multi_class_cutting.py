@@ -7,7 +7,7 @@ import time
 
 # --------- DEFINE TARGETS HERE --------
 n_pieces = {
-	"Apple": 3,
+	"Apple": 2,
 	"Cucumber": 0,
 	"Banana": 0
 }
@@ -60,12 +60,12 @@ for object in object_list:
 		# go to cut 
 		else:
 			# plan cut action (get com and angle)
-			com, angle = skills.plan_cut_multiclass(obj_dict, object, heuristic=EVEN) 
+			com, angle = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
 			# check for collisions with boundary walls
 			wall_collision = skills.push_away_from_wall(com, angle)
 			while wall_collision:
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
-				com, angle = skills.plan_cut_multiclass(obj_dict, object, heuristic=EVEN) 
+				com, angle = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
 				wall_collision = skills.push_away_from_wall(com, angle)
 			# check for collisions with other objects
 			collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle) 

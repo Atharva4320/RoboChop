@@ -240,7 +240,7 @@ class SkillUtils():
 
 		# goto previous slice position and rotation disturb the scene slightly perpendicular to rotation
 		self.fa.goto_gripper(0, block=False)
-		pose.translation = np.array([self.prev_cut_pos[0], self.prev_cut_pos[1], 0.12])
+		pose.translation = np.array([self.prev_cut_pos[0], self.prev_cut_pos[1], 0.125])
 		pose.rotation = self.prev_cut_rot
 		self.fa.goto_pose(pose)
 		# perform rotational disturbance
@@ -272,7 +272,7 @@ class SkillUtils():
 		# print(bbox1[0][1])
 		# print(bbox1[1][0])
 		# print(bbox1[1][1])
-		if (bbox1[0][1] < bbox2[1][1]) or (bbox1[0][0] < bbox2[1][0]):
+		if (bbox1[0][1] < bbox2[1][1]) or (bbox1[0][0] < bbox2[1][0]): # NOTE: no guarantee bbox[0] contains mins and bbox[1] contains maxs
 			return False
 		elif (bbox1[1][0] > bbox2[0][0]) or (bbox1[1][1] > bbox2[0][1]):
 			return False
@@ -292,8 +292,8 @@ class SkillUtils():
 		"""
 		tool_dim = 0.16 # x,y in [m]
 		# NOTE: rotation expected in degrees
-		Lx = 0.5*tool_dim*math.cos(rotation)
-		Ly = 0.5*tool_dim*math.sin(rotation)
+		Lx = 0.5*tool_dim*math.sin(rotation)
+		Ly = 0.5*tool_dim*math.cos(rotation)
 		x1 = blade_com[0] - Lx
 		x2 = blade_com[0] + Lx
 		y1 = blade_com[1] - Ly
@@ -316,20 +316,27 @@ class SkillUtils():
 		"""
 		Simple function to push along x or y axis.
 		"""
+		print("entering push function...")
 		# rotate blade for push angle
 		pose = self.fa.get_pose()
 		pose.rotation = rot
 		self.fa.goto_pose(pose)
 		# goto start position for push
+		self.fa.goto_gripper(0, block=False)
 		pose.translation = trans
 		self.fa.goto_pose(pose)
 		# goto final position for push
-		push_dist = 0.08 # TODO: verify this is a good value
+		push_dist = 0.075 # TODO: verify this is a good value
 		xy_push = push_dist * dir
+		print("\nxy_push: ", xy_push)
+		print("Cur pose: ", pose.translation)
 		pose.translation += np.array([xy_push[0], xy_push[1], 0])
+		print("Translation: ", pose.translation)
 		self.fa.goto_pose(pose)
+		print("\ndone pushing!")
 		# goto intermediate z pose to then reset the gripper rotation
-		pose.translation = np.array([xy_push[0], xy_push[1], 0.25])
+		pose.translation = np.array([trans[0], trans[1], 0.25])
+		print("pose translation: ", pose.translation)
 		self.fa.goto_pose(pose)
 		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
@@ -339,43 +346,56 @@ class SkillUtils():
 		This function detects if the blade will come into contact with the workspace
 		boarders during cut
 		"""
-		tool_dim = 0.16 # x,y in [m]
+		print("\n\npushing away from wall....")
+		tool_dim = 0.18 # x,y in [m]
 		# NOTE: rotation expected in degrees
-		Lx = 0.5*tool_dim*math.cos(rotation)
-		Ly = 0.5*tool_dim*math.sin(rotation)
+		print("Rotation: ", rotation)
+		Lx = abs(0.5*tool_dim*math.sin(rotation))
+		print("math.sin(rotation) ", math.sin(rotation))
+		print("LX: ", Lx)
+		Ly = abs(0.5*tool_dim*math.cos(rotation))
+		print("math.cos(rotation) ", math.cos(rotation))
+		print("Ly: ", Ly)
+		print("COM: ", com)
 		x1 = com[0] - Lx
 		x2 = com[0] + Lx
 		y1 = com[1] - Ly
 		y2 = com[1] + Ly
 		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
+		print("\nTool Bounding Box: ", tool_bb)
+		# print("Cut EE Pose: ", self.fa.get_pose().translation)
 
-		minx = 0.4
-		maxx = 0.6
-		miny = -0.15
-		maxy = 0.15
+		minx = 0.335 # TODO: verify these values
+		maxx = 0.69 # 0.695
+		miny = -0.235
+		maxy = 0.26
 
 		# return pose and orientation of the gripper and the push direction
-		if tool_bb[0][0] <= minx:
-			trans = np.array([minx, com[1], 0.12])
+		if tool_bb[0][0] <= minx or tool_bb[1][0] <= minx:
+			print("less than x")
+			trans = np.array([minx, com[1], 0.145])
 			rot = self.og_rotation
 			dir = np.array([1, 0])
 			self._axis_push(trans, rot, dir)
 			return True
-		elif tool_bb[1][0] >= maxx:
-			trans = np.array([maxx, com[1], 0.12])
+		elif tool_bb[0][0] >= maxx or tool_bb[1][0] >= maxx:
+			print("greater than x")
+			trans = np.array([maxx, com[1], 0.145])
 			rot = self.og_rotation
 			dir = np.array([-1, 0])
 			self._axis_push(trans, rot, dir)
 			return True
-		elif tool_bb[0][1] <= miny:
-			trans = np.array([com[0], miny, 0.12])
+		elif tool_bb[0][1] <= miny or tool_bb[1][1] <= miny:
+			print("less than y")
+			trans = np.array([com[0], miny, 0.145])
 			angle = 90
 			dir = np.array([0, 1])
 			rot = self._get_rot_matrix(self.og_rotation, angle) 
 			self._axis_push(trans, rot, dir)
 			return True
-		elif tool_bb[1][1] >= maxy:
-			trans = np.array([com[0], maxy, 0.12])
+		elif tool_bb[0][1] >= maxy or tool_bb[1][1] >= maxy:
+			print("greater than y")
+			trans = np.array([com[0], maxy, 0.145])
 			angle = 90
 			dir = np.array([0, -1])
 			rot = self._get_rot_matrix(self.og_rotation, angle) 
@@ -388,8 +408,8 @@ class SkillUtils():
 		"""
 		tool_dim = 0.16 # x,y in [m]
 		# NOTE: rotation expected in degrees
-		Lx = 0.5*tool_dim*math.cos(rotation)
-		Ly = 0.5*tool_dim*math.sin(rotation)
+		Lx = 0.5*tool_dim*math.sin(rotation)
+		Ly = 0.5*tool_dim*math.cos(rotation)
 		x1 = blade_com[0] - Lx
 		x2 = blade_com[0] + Lx
 		y1 = blade_com[1] - Ly
@@ -438,14 +458,15 @@ class SkillUtils():
 		pose.rotation = rot_matrix
 		self.fa.goto_pose(pose)
 		# goto start position for push
+		self.fa.goto_gripper(0, block=False)
 		offset = 0.03 # TODO: verify this is a good value
 		xy_offset = offset * dir_vector # TODO: check might want to be negative (you want to be on the opposite size of the object to push in direction of vector???)
-		pose.translation = np.array([cut_obj_com[0] + xy_offset[0], cut_obj_com[1] + xy_offset[1], 0.12])
+		pose.translation = np.array([cut_obj_com[0] + xy_offset[0], cut_obj_com[1] + xy_offset[1], 0.135])
 		self.fa.goto_pose(pose)
 		# goto final position for push
 		push_dist = 0.08 # TODO: verify this is a good value
 		xy_push = push_dist * dir_vector
-		pose.translation += np.array([xy_push[0], xy_push[1], 0.12])
+		pose.translation += np.array([xy_push[0], xy_push[1], 0.135])
 		self.fa.goto_pose(pose)
 		# goto intermediate z pose to then reset the gripper rotation
 		pose.translation = np.array([xy_push[0], xy_push[1], 0.25])
