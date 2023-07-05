@@ -154,7 +154,7 @@ class SkillUtils():
 		angle = math.degrees(math.atan(perp_vector[1] / perp_vector[0]))
 		return com, angle
 	
-	def plan_cut_multiclass(self, obj_dict, object_class):
+	def plan_cut_multiclass(self, obj_dict, object_class, even_heuristic):
 		"""
 		"""
 		cut_idx = self.get_largest_area_idx(obj_dict[object_class])
@@ -164,12 +164,15 @@ class SkillUtils():
 		pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[0][0],sides[0][1],sides[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 		pt1 = np.array([pt1[0], pt1[1] + 0.065]) 
 		pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[1][0],sides[1][1],sides[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-		pt2 = np.array([pt2[0], pt2[1] + 0.065]) 
-		# find perpendicular vector
+		pt2 = np.array([pt2[0], pt2[1] + 0.065])
 		vec = pt2 - pt1
-		perp_vector = self._get_perp_vector(vec)
+		if even_heuristic:
+			# find perpendicular vector
+			vector = self._get_perp_vector(vec)
+		else:
+			vector = vec / np.linalg.norm(vec)
 		# get rotation of the gripper
-		angle = math.degrees(math.atan(perp_vector[1] / perp_vector[0]))
+		angle = math.degrees(math.atan(vector[1] / vector[0]))
 		return com, angle
 
 	def cut(self, count, com, angle):
@@ -309,6 +312,38 @@ class SkillUtils():
 				collision_idxs.append(idx)
 		return collision_idxs
 	
+	def check_wall_collisions_multiclass(self, blade_com, rotation):
+		"""
+		"""
+		tool_dim = 0.16 # x,y in [m]
+		# NOTE: rotation expected in degrees
+		Lx = 0.5*tool_dim*math.cos(rotation)
+		Ly = 0.5*tool_dim*math.sin(rotation)
+		x1 = blade_com[0] - Lx
+		x2 = blade_com[0] + Lx
+		y1 = blade_com[1] - Ly
+		y2 = blade_com[1] + Ly
+		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
+
+		minx = 0.4 # TODO: fill in
+		maxx = 0.6 # TODO: fill in
+		miny = -0.15 # TODO: fill in
+		maxy = 0.15 # TODO: fill in
+
+		if tool_bb[0][0] <= minx:
+			pass
+		elif tool_bb[1][0] >= maxx:
+			pass
+		elif tool_bb[0][1] <= miny:
+			pass
+		elif tool_bb[1][1] >= maxy:
+			pass
+		else:
+			return []
+
+
+
+	
 	def check_cut_collisions_multiclass(self, blade_com, obj_dict, rotation):
 		"""
 		"""
@@ -348,6 +383,9 @@ class SkillUtils():
 		r = Rotation.from_euler('xyz', new_euler, degrees=True)
 		rotation = r.as_matrix()
 		return rotation
+	
+	def plan_push(self, cut_obj_com, push_obj_com):
+		pass
 
 	def push(self, cut_obj_com, push_obj_com):
 		"""
@@ -363,12 +401,12 @@ class SkillUtils():
 		pose.rotation = rot_matrix
 		self.fa.goto_pose(pose)
 		# goto start position for push
-		offset = None
+		offset = 0.03 # TODO: verify this is a good value
 		xy_offset = offset * dir_vector
 		pose.translation = np.array([cut_obj_com[0] + xy_offset[0], cut_obj_com[1] + xy_offset[1], 0.12])
 		self.fa.goto_pose(pose)
 		# goto final position for push
-		push_dist = None
+		push_dist = 0.08 # TODO: verigy this is a good value
 		xy_push = push_dist * dir_vector
 		pose.translation = np.array([xy_push[0], xy_push[1], 0.12])
 		self.fa.goto_pose(pose)

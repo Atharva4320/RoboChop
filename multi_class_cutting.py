@@ -8,8 +8,10 @@ import time
 # --------- DEFINE TARGETS HERE --------
 n_pieces = {
 	"Apple": 3,
-	"Cucumber": 0
+	"Cucumber": 0,
+	"Banana": 0
 }
+EVEN = True # heuristic for slice type
 
 # updIP: This computer, SendIP: other computer 
 udp = U.UdpComms(udpIP='172.26.5.54', sendIP='172.26.69.200', portTX=5501, portRX=5500, enableRX=True)
@@ -58,9 +60,11 @@ for object in object_list:
 		# go to cut 
 		else:
 			# plan cut action (get com and angle)
-			com, angle = skills.plan_cut_multiclass(obj_dict, object) 
-			collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle) 
+			com, angle = skills.plan_cut_multiclass(obj_dict, object, heuristic=EVEN) 
+			# check for collisions with boundary walls
+			
 			# check for collisions
+			collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle) 
 			while len(collisions) > 0:
 				print("Found ", len(collisions), " collisions")
 				for elem in collisions:
