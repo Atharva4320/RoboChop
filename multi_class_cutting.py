@@ -62,15 +62,19 @@ for object in object_list:
 			# plan cut action (get com and angle)
 			com, angle = skills.plan_cut_multiclass(obj_dict, object, heuristic=EVEN) 
 			# check for collisions with boundary walls
-			
-			# check for collisions
+			wall_collision = skills.push_away_from_wall(com, angle)
+			while wall_collision:
+				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
+				com, angle = skills.plan_cut_multiclass(obj_dict, object, heuristic=EVEN) 
+				wall_collision = skills.push_away_from_wall(com, angle)
+			# check for collisions with other objects
 			collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle) 
 			while len(collisions) > 0:
 				print("Found ", len(collisions), " collisions")
-				for elem in collisions:
-					obj_class = elem[0]
-					idx = elem[1]
-					push_obj_com = obj_dict[obj_class][idx][0] 
+				for push_obj_com in collisions:
+					# obj_class = elem[0]
+					# idx = elem[1]
+					# push_obj_com = obj_dict[obj_class][idx][0] 
 					print("\nPush obj com -- should just be x,y: ", push_obj_com)
 					skills.push(com, push_obj_com)
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)

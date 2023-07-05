@@ -312,37 +312,76 @@ class SkillUtils():
 				collision_idxs.append(idx)
 		return collision_idxs
 	
-	def check_wall_collisions_multiclass(self, blade_com, rotation):
+	def _axis_push(self, trans, rot, dir):
 		"""
+		Simple function to push along x or y axis.
+		"""
+		# rotate blade for push angle
+		pose = self.fa.get_pose()
+		pose.rotation = rot
+		self.fa.goto_pose(pose)
+		# goto start position for push
+		pose.translation = trans
+		self.fa.goto_pose(pose)
+		# goto final position for push
+		push_dist = 0.08 # TODO: verify this is a good value
+		xy_push = push_dist * dir
+		pose.translation += np.array([xy_push[0], xy_push[1], 0])
+		self.fa.goto_pose(pose)
+		# goto intermediate z pose to then reset the gripper rotation
+		pose.translation = np.array([xy_push[0], xy_push[1], 0.25])
+		self.fa.goto_pose(pose)
+		pose.rotation = self.og_rotation
+		self.fa.goto_pose(pose)
+	
+	def push_away_from_wall(self, com, rotation):
+		"""
+		This function detects if the blade will come into contact with the workspace
+		boarders during cut
 		"""
 		tool_dim = 0.16 # x,y in [m]
 		# NOTE: rotation expected in degrees
 		Lx = 0.5*tool_dim*math.cos(rotation)
 		Ly = 0.5*tool_dim*math.sin(rotation)
-		x1 = blade_com[0] - Lx
-		x2 = blade_com[0] + Lx
-		y1 = blade_com[1] - Ly
-		y2 = blade_com[1] + Ly
+		x1 = com[0] - Lx
+		x2 = com[0] + Lx
+		y1 = com[1] - Ly
+		y2 = com[1] + Ly
 		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
 
-		minx = 0.4 # TODO: fill in
-		maxx = 0.6 # TODO: fill in
-		miny = -0.15 # TODO: fill in
-		maxy = 0.15 # TODO: fill in
+		minx = 0.4
+		maxx = 0.6
+		miny = -0.15
+		maxy = 0.15
 
+		# return pose and orientation of the gripper and the push direction
 		if tool_bb[0][0] <= minx:
-			pass
+			trans = np.array([minx, com[1], 0.12])
+			rot = self.og_rotation
+			dir = np.array([1, 0])
+			self._axis_push(trans, rot, dir)
+			return True
 		elif tool_bb[1][0] >= maxx:
-			pass
+			trans = np.array([maxx, com[1], 0.12])
+			rot = self.og_rotation
+			dir = np.array([-1, 0])
+			self._axis_push(trans, rot, dir)
+			return True
 		elif tool_bb[0][1] <= miny:
-			pass
+			trans = np.array([com[0], miny, 0.12])
+			angle = 90
+			dir = np.array([0, 1])
+			rot = self._get_rot_matrix(self.og_rotation, angle) 
+			self._axis_push(trans, rot, dir)
+			return True
 		elif tool_bb[1][1] >= maxy:
-			pass
-		else:
-			return []
-
-
-
+			trans = np.array([com[0], maxy, 0.12])
+			angle = 90
+			dir = np.array([0, -1])
+			rot = self._get_rot_matrix(self.og_rotation, angle) 
+			self._axis_push(trans, rot, dir)
+			return True
+		return False
 	
 	def check_cut_collisions_multiclass(self, blade_com, obj_dict, rotation):
 		"""
@@ -367,7 +406,8 @@ class SkillUtils():
 				l2 = [pt2[0], pt2[1] + 0.065]
 				obj_bb = [l1, l2]
 				if self._intersects(tool_bb, obj_bb):
-					collision_idxs.append([obj_class, idx])
+					collision_idxs.append(obj_dict[obj_class][idx][0:2])
+					# collision_idxs.append([obj_class, idx])
 		return collision_idxs
 
 	def _get_perp_vector(self, vec):
@@ -383,9 +423,6 @@ class SkillUtils():
 		r = Rotation.from_euler('xyz', new_euler, degrees=True)
 		rotation = r.as_matrix()
 		return rotation
-	
-	def plan_push(self, cut_obj_com, push_obj_com):
-		pass
 
 	def push(self, cut_obj_com, push_obj_com):
 		"""
@@ -402,13 +439,13 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 		# goto start position for push
 		offset = 0.03 # TODO: verify this is a good value
-		xy_offset = offset * dir_vector
+		xy_offset = offset * dir_vector # TODO: check might want to be negative (you want to be on the opposite size of the object to push in direction of vector???)
 		pose.translation = np.array([cut_obj_com[0] + xy_offset[0], cut_obj_com[1] + xy_offset[1], 0.12])
 		self.fa.goto_pose(pose)
 		# goto final position for push
-		push_dist = 0.08 # TODO: verigy this is a good value
+		push_dist = 0.08 # TODO: verify this is a good value
 		xy_push = push_dist * dir_vector
-		pose.translation = np.array([xy_push[0], xy_push[1], 0.12])
+		pose.translation += np.array([xy_push[0], xy_push[1], 0.12])
 		self.fa.goto_pose(pose)
 		# goto intermediate z pose to then reset the gripper rotation
 		pose.translation = np.array([xy_push[0], xy_push[1], 0.25])
