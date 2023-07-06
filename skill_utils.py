@@ -166,13 +166,19 @@ class SkillUtils():
 		pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([sides[1][0],sides[1][1],sides[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 		pt2 = np.array([pt2[0], pt2[1] + 0.065])
 		vec = pt2 - pt1
-		if even_heuristic:
-			# find perpendicular vector
-			vector = self._get_perp_vector(vec)
-		else:
-			vector = vec / np.linalg.norm(vec)
+		# if even_heuristic:
+		# 	# find perpendicular vector
+		# 	vector = self._get_perp_vector(vec)
+			# print("got perpendicular vector") # TODO: perpendicular vector not working how indended
+		# else:
+		vector = vec / np.linalg.norm(vec)
 		# get rotation of the gripper
 		angle = math.degrees(math.atan(vector[1] / vector[0]))
+		print("angle: ", angle)
+		if even_heuristic:
+			# should cut at a perpendicular rotation
+			angle += 90
+			print("perpendicular angle: ", angle)
 		return com, angle
 
 	def cut(self, count, com, angle):
@@ -233,12 +239,7 @@ class SkillUtils():
 		"""
 		print("\nDisturbing scene...")
 		pose = self.fa.get_pose()
-		# dist = 0.035
-		# # TODO: DO A ROTATION TO DISTURB INSTEAD OF TRANSLATION
-		# vec = np.array([math.sin(self.prev_cut_angle) * 0.08, math.cos(self.prev_cut_angle) * 0.08])
-		# xy_dists = dist * self._get_perp_vector(vec)
-
-		# goto previous slice position and rotation disturb the scene slightly perpendicular to rotation
+		# goto previous slice position and rotation disturb the scene slightly 
 		self.fa.goto_gripper(0, block=False)
 		pose.translation = np.array([self.prev_cut_pos[0], self.prev_cut_pos[1], 0.125])
 		pose.rotation = self.prev_cut_rot
@@ -251,40 +252,37 @@ class SkillUtils():
 		rot = self._get_rot_matrix(self.prev_cut_rot, -th_delta) 
 		pose.rotation = rot
 		self.fa.goto_pose(pose)
-		# # disturb the scene --> currently assuming cutting blade fixed, so only move in x-direction
-		# pose.translation = np.array([self.prev_cut_pos[0] - xy_dists[0], self.prev_cut_pos[1] - xy_dists[1], 0.12])
-		# # pose.translation = np.array([self.prev_cut_pos[0] - 0.03, self.prev_cut_pos[1], 0.12])
-		# self.fa.goto_pose(pose)
-		# pose.translation = np.array([self.prev_cut_pos[0] + xy_dists[0], self.prev_cut_pos[1] + xy_dists[1], 0.12])
-		# # pose.translation = np.array([self.prev_cut_pos[0] + 0.03, self.prev_cut_pos[1], 0.12])
-		# self.fa.goto_pose(pose)
-		# reset to original rotation
 		pose.translation = np.array([self.prev_cut_pos[0], self.prev_cut_pos[1], 0.22])
 		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
 
 	def _intersects(self, bbox1, bbox2):
-		# bbox1 = [[x1, y1], [x2, y2]]
-		# bbox2 = [[x1, y1], [x2, y2]]
-		# print("bbox1: ", bbox1)
-		# print("bbox2: ", bbox2)
-		# print(bbox1[0][0])
-		# print(bbox1[0][1])
-		# print(bbox1[1][0])
-		# print(bbox1[1][1])
-		if (bbox1[0][1] < bbox2[1][1]) or (bbox1[0][0] < bbox2[1][0]): # NOTE: no guarantee bbox[0] contains mins and bbox[1] contains maxs
-			return False
-		elif (bbox1[1][0] > bbox2[0][0]) or (bbox1[1][1] > bbox2[0][1]):
+		x11 = bbox1[0][0]
+		y11 = bbox1[0][1]
+		x12 = bbox1[1][0]
+		y12 = bbox1[1][1]
+		x21 = bbox2[0][0]
+		y21 = bbox2[0][1]
+		x22 = bbox2[1][0]
+		y22 = bbox2[1][1]
+		if x11 > x22 or x12 < x21 or y11 > y22 or y12 < y21:
 			return False
 		else:
 			return True
+		# # check 
+		# if (bbox1[0][1] < bbox2[1][1]) or (bbox1[0][0] < bbox2[1][0]): # NOTE: no guarantee bbox[0] contains mins and bbox[1] contains maxs
+		# 	return False
+		# elif (bbox1[1][0] > bbox2[0][0]) or (bbox1[1][1] > bbox2[0][1]):
+		# 	return False
+		# else:
+		# 	return True
 		# if ((bbox1[0][0] <= bbox2[1][0]) or (bbox1[1][0] >= bbox2[0][0])) and ((bbox1[0][1] <= bbox2[1][1]) or (bbox1[1][1] >= bbox2[0][1])):
 		# 	return True
 		# return False
 
 	def check_cut_collisions(self, blade_com, obj_dict, rotation):
 		"""
-		TODO: check collisions with barrier!
+		This function checks for collisions of blade with non-target objects.
 
 		- generate simple bounding box (4 corners) based on blade rotation
 		- iterate through obj_dict and check for collisions between blade and obj bounding boxes
@@ -346,27 +344,26 @@ class SkillUtils():
 		This function detects if the blade will come into contact with the workspace
 		boarders during cut
 		"""
-		print("\n\npushing away from wall....")
 		tool_dim = 0.18 # x,y in [m]
 		# NOTE: rotation expected in degrees
 		print("Rotation: ", rotation)
 		Lx = abs(0.5*tool_dim*math.sin(rotation))
-		print("math.sin(rotation) ", math.sin(rotation))
-		print("LX: ", Lx)
+		# print("math.sin(rotation) ", math.sin(rotation))
+		# print("LX: ", Lx)
 		Ly = abs(0.5*tool_dim*math.cos(rotation))
-		print("math.cos(rotation) ", math.cos(rotation))
-		print("Ly: ", Ly)
-		print("COM: ", com)
+		# print("math.cos(rotation) ", math.cos(rotation))
+		# print("Ly: ", Ly)
+		# print("COM: ", com)
 		x1 = com[0] - Lx
 		x2 = com[0] + Lx
 		y1 = com[1] - Ly
 		y2 = com[1] + Ly
 		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
-		print("\nTool Bounding Box: ", tool_bb)
+		# print("\nTool Bounding Box: ", tool_bb)
 		# print("Cut EE Pose: ", self.fa.get_pose().translation)
 
-		minx = 0.335 # TODO: verify these values
-		maxx = 0.69 # 0.695
+		minx = 0.335 
+		maxx = 0.69 
 		miny = -0.235
 		maxy = 0.26
 
@@ -408,13 +405,14 @@ class SkillUtils():
 		"""
 		tool_dim = 0.16 # x,y in [m]
 		# NOTE: rotation expected in degrees
-		Lx = 0.5*tool_dim*math.sin(rotation)
-		Ly = 0.5*tool_dim*math.cos(rotation)
+		Lx = abs(0.5*tool_dim*math.sin(rotation))
+		Ly = abs(0.5*tool_dim*math.cos(rotation))
 		x1 = blade_com[0] - Lx
 		x2 = blade_com[0] + Lx
 		y1 = blade_com[1] - Ly
 		y2 = blade_com[1] + Ly
 		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
+		print("Tool BB: ", tool_bb)
 
 		collision_idxs = []
 		for obj_class in obj_dict:
@@ -425,13 +423,18 @@ class SkillUtils():
 				pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[1][0],bb_cam_frame[1][1],bb_cam_frame[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 				l2 = [pt2[0], pt2[1] + 0.065]
 				obj_bb = [l1, l2]
+				print("Object BB: ", obj_bb)
 				if self._intersects(tool_bb, obj_bb):
+					print("Intersection detected...")
 					collision_idxs.append(obj_dict[obj_class][idx][0:2])
 					# collision_idxs.append([obj_class, idx])
 		return collision_idxs
 
 	def _get_perp_vector(self, vec):
-		unit = np.array([vec[1], -vec[0]])
+		"""
+		Returns the unit vector perpendicular to the input vector.
+		"""
+		unit = np.array([-vec[1], vec[0]])
 		unit = unit / np.linalg.norm(unit)
 		return unit
 	
@@ -448,9 +451,12 @@ class SkillUtils():
 		"""
 		"""
 		# NOTE: cut_obj_com and push_obj_com should only have x and y coordinates (no z)
-		dir_vector = (push_obj_com - cut_obj_com) / np.linalg.norm(push_obj_com - cut_obj_com)
+		dir_vector = (cut_obj_com - push_obj_com) / np.linalg.norm(cut_obj_com - push_obj_com)
+		print("\ndir vector: ", dir_vector)
 		perp_vector = self._get_perp_vector(dir_vector)
+		print("\nperp vector: ", perp_vector)
 		rot_angle = math.degrees(math.arctan(perp_vector[1] / perp_vector[0]))
+		print("rot angle: ", rot_angle)
 		pose = self.fa.get_pose()
 		rot_matrix = self._get_rot_matrix(self.og_rotation, rot_angle) 
 		# rotate blade for push angle
@@ -459,12 +465,12 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 		# goto start position for push
 		self.fa.goto_gripper(0, block=False)
-		offset = 0.03 # TODO: verify this is a good value
-		xy_offset = offset * dir_vector # TODO: check might want to be negative (you want to be on the opposite size of the object to push in direction of vector???)
+		offset = 0.05 # TODO: verify this is a good value --> depends on fruit dimensions
+		xy_offset = -offset * dir_vector 
 		pose.translation = np.array([cut_obj_com[0] + xy_offset[0], cut_obj_com[1] + xy_offset[1], 0.135])
 		self.fa.goto_pose(pose)
 		# goto final position for push
-		push_dist = 0.08 # TODO: verify this is a good value
+		push_dist = 0.09 # TODO: verify this is a good value
 		xy_push = push_dist * dir_vector
 		pose.translation += np.array([xy_push[0], xy_push[1], 0.135])
 		self.fa.goto_pose(pose)

@@ -86,9 +86,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_12.mp4')
-	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_12.mp4')
-	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_12.mp4')
+	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_16.mp4')
+	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_16.mp4')
+	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_16.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -188,7 +188,8 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 						# centroids[8] -> lp_2 -> [x,y]
 
 							cv2.rectangle(result_frame_cpy, (centroids[3], centroids[4]), (centroids[5], centroids[6]), (0, 0, 255), 2)
-
+							# cv2.imshow("Result frame", result_frame_cpy)
+							# cv2.waitkey(0)
 							print(f"\ncentroid: ({centroids[1]}, {centroids[0]})", "area: ", centroids[2])
 							obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
 						
@@ -298,7 +299,7 @@ if __name__ == '__main__':
 		warnings.warn("The file does not exits.")
 	
 	#============= Loading the YOLO Model =======================
-	model_path_YOLO = os.path.join('Models', 'best.pt')
+	model_path_YOLO = os.path.join('Models', 'best_1.pt')
 	print(model_path_YOLO)
 
 	if os.path.isfile(model_path_YOLO):
