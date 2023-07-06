@@ -253,23 +253,25 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	classes = detections[:, 5]
 	names = np.array([result.names[class_idx] for class_idx in classes])
 
-	print("Actual YOLO result:")
-	print(detections)
-	# Sort by class index (last column)
-	sorted_detection = detections[detections[:,-1].argsort()]
-	print("\nSorted results:")
-	print(sorted_detection)
+	# print("Actual YOLO result:")
+	# print(detections)
+	# # Sort by class index (last column)
+	# sorted_detection = detections[detections[:,-1].argsort()]
+	# print("\nSorted results:")
+	# print(sorted_detection)
 
 
-	print("\nNames: ", names)
-	print("\nBoxes: ", boxes)
-	print("\nScores: ", scores)
+	# print("\nNames: ", names)
+	# print("\nBoxes: ", boxes)
+	# print("\nScores: ", scores)
 
-	box_to_keep = []
-	for i, box in enumerate(boxes):
-		print(f"(x1={box[0]}, y1={box[1]}, x2={box[2]}, y2={box[3]})")
-		# cropped_image = image[box[1]:box[3], box[0]:box[2]]
-		# cropped_result = model(cropped_image)[0]
+	# box_to_keep = []
+	# for i, box in enumerate(boxes):
+	# 	print(f"(x1={box[0]}, y1={box[1]}, x2={box[2]}, y2={box[3]})")
+	# 	cropped_image = image[int(box[1]):int(box[3]), int(box[0]):int(box[2])]
+	# 	cv2.imshow("Cropped Image", cropped_image)
+	# 	cv
+	# 	# cropped_result = model(cropped_image)[0]
 		# cropped_det = cropped_result.boxes.data.cpu().numpy()
 
 
