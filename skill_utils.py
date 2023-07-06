@@ -169,13 +169,11 @@ class SkillUtils():
 		# if even_heuristic:
 		# 	# find perpendicular vector
 		# 	vector = self._get_perp_vector(vec)
-			print("got perpendicular vector") # TODO: perpendicular vector not working how indended
+			# print("got perpendicular vector") # TODO: perpendicular vector not working how indended
 		# else:
 		vector = vec / np.linalg.norm(vec)
-			print("normalized longest vector")
 		# get rotation of the gripper
 		angle = math.degrees(math.atan(vector[1] / vector[0]))
-		# angle = 0 # uncomment to make it not rotate
 		print("angle: ", angle)
 		if even_heuristic:
 			# should cut at a perpendicular rotation
