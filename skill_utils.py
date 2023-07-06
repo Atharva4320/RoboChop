@@ -151,7 +151,8 @@ class SkillUtils():
 		vec = pt2 - pt1
 		perp_vector = self._get_perp_vector(vec)
 		# get rotation of the gripper
-		angle = math.degrees(math.atan(perp_vector[1] / perp_vector[0]))
+		# angle = math.degrees(math.atan(perp_vector[1] / perp_vector[0]))
+		angle = 0
 		return com, angle
 	
 	def plan_cut_multiclass(self, obj_dict, object_class, even_heuristic):
@@ -179,7 +180,7 @@ class SkillUtils():
 			# should cut at a perpendicular rotation
 			angle += 90
 			print("perpendicular angle: ", angle)
-		return com, angle
+		return com, angle, cut_idx
 
 	def cut(self, count, com, angle):
 		self.prev_cut_pos = com
@@ -280,7 +281,7 @@ class SkillUtils():
 		# 	return True
 		# return False
 
-	def check_cut_collisions(self, blade_com, obj_dict, rotation):
+	def check_cut_collisions(self, blade_com, obj_dict, rotation, cut_idx):
 		"""
 		This function checks for collisions of blade with non-target objects.
 
@@ -300,14 +301,15 @@ class SkillUtils():
 
 		collision_idxs = []
 		for idx in obj_dict:
-			bb_cam_frame = obj_dict[idx][2]
-			pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[0][0],bb_cam_frame[0][1],bb_cam_frame[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-			l1 = [pt1[0], pt1[1] + 0.065]
-			pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[1][0],bb_cam_frame[1][1],bb_cam_frame[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-			l2 = [pt2[0], pt2[1] + 0.065]
-			obj_bb = [l1, l2]
-			if self._intersects(tool_bb, obj_bb):
-				collision_idxs.append(idx)
+			if idx != cut_idx:
+				bb_cam_frame = obj_dict[idx][2]
+				pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[0][0],bb_cam_frame[0][1],bb_cam_frame[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+				l1 = [pt1[0], pt1[1] + 0.065]
+				pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[1][0],bb_cam_frame[1][1],bb_cam_frame[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+				l2 = [pt2[0], pt2[1] + 0.065]
+				obj_bb = [l1, l2]
+				if self._intersects(tool_bb, obj_bb):
+					collision_idxs.append(idx)
 		return collision_idxs
 	
 	def _axis_push(self, trans, rot, dir):
@@ -450,6 +452,9 @@ class SkillUtils():
 	def push(self, cut_obj_com, push_obj_com):
 		"""
 		"""
+		print("\nCut COM: ", cut_obj_com)
+		print("Push obj com: ", push_obj_com)
+		assert False
 		# NOTE: cut_obj_com and push_obj_com should only have x and y coordinates (no z)
 		dir_vector = (cut_obj_com - push_obj_com) / np.linalg.norm(cut_obj_com - push_obj_com)
 		print("\ndir vector: ", dir_vector)
