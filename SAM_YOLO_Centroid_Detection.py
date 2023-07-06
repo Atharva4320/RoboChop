@@ -255,10 +255,10 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 
 	print("Actual YOLO result:")
 	print(detections)
-	
-	# [[     340.92      255.37      482.54      405.07     0.79542           1]
- 	# [     550.61      369.47      629.83      452.81     0.42456           0]
- 	# [     584.46       296.3       669.2      373.13     0.34875           0]]
+	# Sort by class index (last column)
+	sorted_detection = detections[detections[:,-1].argsort()]
+	print("\nSorted results:")
+	print(sorted_detection)
 
 
 	print("\nNames: ", names)
@@ -267,14 +267,15 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 
 	box_to_keep = []
 	for i, box in enumerate(boxes):
-		cropped_image = image[box[1]:box[3], box[0]:box[2]]
-		cropped_result = model(cropped_image)[0]
-		cropped_det = cropped_result.boxes.data.cpu().numpy()
+		print(f"(x1={box[0]}, y1={box[1]}, x2={box[2]}, y2={box[3]})")
+		# cropped_image = image[box[1]:box[3], box[0]:box[2]]
+		# cropped_result = model(cropped_image)[0]
+		# cropped_det = cropped_result.boxes.data.cpu().numpy()
 
 
-		print("Actual name: ", np.array([cropped_result.names[class_ind] for class_ind in cropped_det[:, 5]]))
+		# print("Actual name: ", np.array([cropped_result.names[class_ind] for class_ind in cropped_det[:, 5]]))
 
-		
+
 
 
 	# TODO: 
