@@ -391,7 +391,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 			cent_list = []
 			for bc in box_coord[i]:
 				cropped_img = frame[bc[1]:bc[3], bc[0]:bc[2]]
-				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(cropped_img, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
 				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 			cent_list_per_item.append(cent_list)
 		# print("In calculate_centroid() function:")
@@ -497,7 +497,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
 
 
 
-def calculate_sam_centroid(cropped_image, mask_generator, x1, y1, x2, y2, display_mask):
+def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	"""
 	This function calculates the centroid using SAM 
 	and draws it on the given frame. It also has an option to display the generated mask.
@@ -534,6 +534,7 @@ def calculate_sam_centroid(cropped_image, mask_generator, x1, y1, x2, y2, displa
 
 	global counter
 
+	cropped_image = frame[y1:y2, x1:x2]
 	cropped_mask = mask_generator.generate(cropped_image)
 	
 	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask)
