@@ -159,6 +159,7 @@ class SkillUtils():
 		"""
 		"""
 		cut_idx = self.get_largest_area_idx(obj_dict[object_class])
+		print("Cut index: ", cut_idx)
 		com = obj_dict[object_class][cut_idx][0]
 		sides = obj_dict[object_class][cut_idx][3]
 		# convert to world coordinates
@@ -402,7 +403,7 @@ class SkillUtils():
 			return True
 		return False
 	
-	def check_cut_collisions_multiclass(self, blade_com, obj_dict, rotation):
+	def check_cut_collisions_multiclass(self, blade_com, obj_dict, rotation, cut_idx):
 		"""
 		"""
 		tool_dim = 0.16 # x,y in [m]
@@ -419,17 +420,18 @@ class SkillUtils():
 		collision_idxs = []
 		for obj_class in obj_dict:
 			for idx in obj_dict[obj_class]:
-				bb_cam_frame = obj_dict[obj_class][idx][2]
-				pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[0][0],bb_cam_frame[0][1],bb_cam_frame[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-				l1 = [pt1[0], pt1[1] + 0.065]
-				pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[1][0],bb_cam_frame[1][1],bb_cam_frame[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
-				l2 = [pt2[0], pt2[1] + 0.065]
-				obj_bb = [l1, l2]
-				print("Object BB: ", obj_bb)
-				if self._intersects(tool_bb, obj_bb):
-					print("Intersection detected...")
-					collision_idxs.append(obj_dict[obj_class][idx][0:2])
-					# collision_idxs.append([obj_class, idx])
+				if idx != cut_idx:
+					bb_cam_frame = obj_dict[obj_class][idx][2]
+					pt1 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[0][0],bb_cam_frame[0][1],bb_cam_frame[0][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+					l1 = [pt1[0], pt1[1] + 0.065]
+					pt2 = get_object_center_point_in_world_realsense_3D_camera_point(np.array([bb_cam_frame[1][0],bb_cam_frame[1][1],bb_cam_frame[1][2]]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
+					l2 = [pt2[0], pt2[1] + 0.065]
+					obj_bb = [l1, l2]
+					print("Object BB: ", obj_bb)
+					if self._intersects(tool_bb, obj_bb):
+						print("Intersection detected...")
+						collision_idxs.append(obj_dict[obj_class][idx][0:2])
+						# collision_idxs.append([obj_class, idx])
 		return collision_idxs
 
 	def _get_perp_vector(self, vec):
