@@ -260,6 +260,18 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	print("\nBoxes: ", boxes)
 	print("\nScores: ", scores)
 
+	box_to_keep = []
+	for i, box in enumerate(boxes):
+		cropped_image = image[box[1]:box[3], box[0]:box[2]]
+		cropped_result = model(cropped_image)[0]
+		cropped_det = cropped_result.boxes.data.cpu().numpy()
+
+
+		print("Actual name: ", np.array([cropped_result.names[class_ind] for class_ind in cropped_det[:, 5]]))
+
+		
+
+
 	# TODO: 
 	# 	-> Check if the detection boxes are arranged in an order
 	#		-> If so, check if the bounding boxes of the same classes are overlapping
@@ -370,7 +382,8 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		for i in range(len(box_coord)):
 			cent_list = []
 			for bc in box_coord[i]:
-				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+				cropped_img = frame[bc[1]:bc[3], bc[0]:bc[2]]
+				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(cropped_img, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
 				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 			cent_list_per_item.append(cent_list)
 		# print("In calculate_centroid() function:")
@@ -476,7 +489,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
 
 
 
-def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
+def calculate_sam_centroid(cropped_image, mask_generator, x1, y1, x2, y2, display_mask):
 	"""
 	This function calculates the centroid using SAM 
 	and draws it on the given frame. It also has an option to display the generated mask.
@@ -513,19 +526,16 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 
 	global counter
 
-	cropped_img = frame[y1:y2, x1:x2]
-
-	cropped_mask = mask_generator.generate(cropped_img)
+	cropped_mask = mask_generator.generate(cropped_image)
 	
-	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_img, cropped_mask)
-
+	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask)
 
 	if display_mask:
 		print("Saving the cropped image...")
 		filename = f'cropped_image_{counter}.jpg'
 		current_dir = os.getcwd()
 		image_path = os.path.join(current_dir, filename)
-		cv2.imwrite(image_path, cropped_img)
+		cv2.imwrite(image_path, cropped_image)
 		print("Cropped image saved at: ", image_path)
 		counter += 1
 		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR) #[10:y2+10-y1, 10:x2+10-x1], cv2.COLOR_RGB2BGR)
