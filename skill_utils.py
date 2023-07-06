@@ -364,8 +364,8 @@ class SkillUtils():
 		# print("\nTool Bounding Box: ", tool_bb)
 		# print("Cut EE Pose: ", self.fa.get_pose().translation)
 
-		minx = 0.335 
-		maxx = 0.69 
+		minx = 0.335 # TODO: verify these values
+		maxx = 0.69 # 0.695
 		miny = -0.235
 		maxy = 0.26
 
@@ -456,7 +456,8 @@ class SkillUtils():
 		print("Push obj com: ", push_obj_com)
 		assert False
 		# NOTE: cut_obj_com and push_obj_com should only have x and y coordinates (no z)
-		dir_vector = (cut_obj_com - push_obj_com) / np.linalg.norm(cut_obj_com - push_obj_com)
+		# TODO: determine if it should be push - cut or cut - push
+		dir_vector = (push_obj_com - cut_obj_com) / np.linalg.norm(push_obj_com - cut_obj_com)
 		print("\ndir vector: ", dir_vector)
 		perp_vector = self._get_perp_vector(dir_vector)
 		print("\nperp vector: ", perp_vector)
@@ -470,12 +471,12 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 		# goto start position for push
 		self.fa.goto_gripper(0, block=False)
-		offset = 0.05 # TODO: verify this is a good value --> depends on fruit dimensions
-		xy_offset = -offset * dir_vector 
+		offset = 0.03 # TODO: verify this is a good value
+		xy_offset = offset * dir_vector # TODO: check might want to be negative (you want to be on the opposite size of the object to push in direction of vector???)
 		pose.translation = np.array([cut_obj_com[0] + xy_offset[0], cut_obj_com[1] + xy_offset[1], 0.135])
 		self.fa.goto_pose(pose)
 		# goto final position for push
-		push_dist = 0.09 # TODO: verify this is a good value
+		push_dist = 0.05 # TODO: verify this is a good value
 		xy_push = push_dist * dir_vector
 		pose.translation += np.array([xy_push[0], xy_push[1], 0.135])
 		self.fa.goto_pose(pose)
