@@ -160,8 +160,10 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 
 				# frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
 
+
 				# cv2.imshow("Frame", frame)
-				
+				# Copy the image:
+				result_frame_cpy = result_frame.copy()
 				## in a for loop:
 				message_list = []
 				print("Retuning to SAM loop after getting the centroid lists...")
@@ -184,6 +186,8 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 						# centroids[6] -> bc[3] -> y2
 						# centroids[7] -> lp_1 -> [x,y]
 						# centroids[8] -> lp_2 -> [x,y]
+
+							cv2.rectangle(result_frame_cpy, (centroids[3], centroids[4]), (centroids[5], centroids[6]), (0, 0, 255), 2)
 
 							print(f"\ncentroid: ({centroids[1]}, {centroids[0]})", "area: ", centroids[2])
 							obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
@@ -220,7 +224,10 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 							prev_loc = coord_list
 					# print("Coord List: ", coord_list)
 					message_list.append(coord_list)
-
+				
+				print("Saving the resultant frame image for paper...")
+				cv2.imwrite('result_frame_boxes.jpg', result_frame_cpy)
+				
 				message_good = True
 				for j in range(len(target_list)):
 					if message_good:

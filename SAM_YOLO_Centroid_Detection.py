@@ -13,6 +13,7 @@ from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamP
 import ultralytics
 from ultralytics import YOLO
 
+counter = 0
 
 def show_progress(count, block_size, total_size):
 	"""
@@ -252,6 +253,23 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	classes = detections[:, 5]
 	names = np.array([result.names[class_idx] for class_idx in classes])
 
+	print("Actual YOLO result:")
+	print(detections)
+
+	print("\nNames: ", names)
+	print("\nBoxes: ", boxes)
+	print("\nScores: ", scores)
+
+	# TODO: 
+	# 	-> Check if the detection boxes are arranged in an order
+	#		-> If so, check if the bounding boxes of the same classes are overlapping
+	#	-> If detection not in order:
+	#		*-> Sort the classes in a order [0, 1, 2, ...] <= {0=APPLE, 1=BANANA, ...}
+	#		-> Run a loop where we select the bounding boxes that belong to one class
+	#		-> Get their indices and check the overlap between them
+	#		-> Store the bounding boxes per class
+
+
 	#TODO: Multiple target objects
 	bbox_target_list = []
 	for target_name in target_class:
@@ -283,102 +301,6 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	# print("In detect_objects() function:")
 	# print("Returned bounding boxes: ", bbox_target_list)
 	return image, bbox_target_list
-
-	# # print(result.boxes.data.cpu().numpy(), type(result.boxes.data.cpu().numpy()))
-
-	# result = results[0].xyxy[0]
-	
-	# boxes = result[:, :4]
-	# names = result[:, 5].int()
-	# score = result[:, 4]
-
-	# indices = torch.where(names == target_class)
-
-	# if indices[0].numel() != 0:  
-	# 	boxes = boxes[indices]
-	# 	scores = scores[indices]
-
-	# 	keep = nms(boxes, scores, iou_threshold=0.5)
-	# 	print("\nTARGET CLASSES:")
-	# 	print(boxes[keep].numpy().tolist(), scores)
-
-	
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-
-	# # Perform object detection on the image using the model
-	# results = model.predict(image)
-
-	# # If detect_all flag is not set, proceed with finding the target_class
-	# result = results[0]
-	
-	# boxes_list = []
-	
-	# # If detect_all flag is set to True, plot all detected objects on the image and returns the image
-	# if detect_all:
-	# 	img = result.plot()
-	# 	return img, boxes_list
-
-	# boxes = result.boxes.cpu().numpy()  # Extract bounding box coordinates and convert them to numpy array
-	# names = np.array([result.names[i] for i in boxes.cls])  # Extract class names for detected objects
-	# print("RESULTS")
-	# # print(results, len(results), result.probs)
-	# if result.probs != None:
-	# 	print(results.probs)
-	# 	scores = result.probs.cpu().numpy()  # Get the probablity score
-
-	# # Find indices of the detected objects that match the target_class
-	# indices = np.where(names == target_class)  # Search for target object
-	
-
-	# if len(indices[0]) != 0:  # Found a target object
-	# 	for i in range(len(indices[0])):
-	# 		box = boxes[indices[0][i]].xyxy[0].astype(int)  # Get the box coordinates of the target
-	# 		boxes_list.append(box)
-	# 	#x1, y1, x2, y2 = boxes[indices[0][0]].xyxy[0].astype(int)  # Get the box coordinates of the target
-	# 	return image, boxes_list
-	# else:  # If target_class is not found, return the original image and empty list
-	# 	return image, boxes_list
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-
-	# If target_class is found in the detected objects, extract its bounding box coordinates
-	# thrs_ovr = 20
-	# if len(indices[0]) != 0:  # Found a target object
-	# 	boxes = boxes[indices]
-	# 	scores = scores[indices]
-
-	# 	# Applying non-maximum suppression
-	# 	keep = nms(boxes, scores, iou_threshold=0.5)
-
-	# 	boxes_list = boxes[keep].numpy().tolist()
-	# 	print("\nBoxes_List: ", boxes_list)
-
-	# 	return image, boxes_list
-	# else:
-	# 	return image, []
-
-		# for i in range(len(indices[0])):
-			# box = boxes[indices[0][i]].xyxy[0].astype(int)  # Get the box coordinates of the target
-			# if len(boxes_list) == 0:
-			# 	boxes_list.append(box)
-			# else:
-			# 	for i in range(len(boxes_list)):
-			# 		x1_diff = np.abs(boxes_list[i][0] - box[0])  # x1
-			# 		y1_diff = np.abs(boxes_list[i][1] - box[1])  # y1
-			# 		# x2_diff = np.abs(boxes_list[i][2] - box[2])  # x2
-			# 		# y2_diff = np.abs(boxes_list[i][3] - box[3])  # y2
-
-			# 		if x1_diff <= thrs_ovr or y1_diff <= thrs_ovr: # or x2_diff <= thrs_ovr or y2_diff <= thrs_ovr:
-			# 			bbox_area = boxes_list[i][0] * boxes_list[i][1]
-			# 			box_area = box[0] * box[1]
-
-			# 			if box_area > bbox_area:
-			# 				boxes_list.pop(i)
-			# 				boxes_list.insert(i, box)
-			# 			else:
-			# 				continue
-	# 	return image, boxes_list
-	# else:  # If target_class is not found, return the original image and empty list
-	# 	return image, boxes_list
 
    
 
@@ -430,7 +352,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		# print("Classes to detect: ", len(poi))
 		frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
 
-	# Handle zero coordinatescent_x, cent_y, poi_area,
+	# Handle zero coordinates: cent_x, cent_y, poi_area,
 	if len(box_coord) == 0:
 		return handle_zero_coordinates(frame, return_frame)
 	
@@ -589,15 +511,23 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	"""
 	# This function calculates the centroid using sam method
 
-	cropped_img = frame[y1:y2, x1:x2]#[y1-10:y2+10, x1-10:x2+10]
-	# start_time_sam = time.time()
+	global counter
+
+	cropped_img = frame[y1:y2, x1:x2]
+
 	cropped_mask = mask_generator.generate(cropped_img)
-	# end_time_sam = time.time()
-	# print("Time elapsed SAM: {}s".format(np.abs(end_time_sam - start_time_sam)))
+	
 	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_img, cropped_mask)
 
 
 	if display_mask:
+		print("Saving the cropped image...")
+		filename = f'cropped_image_{counter}.jpg'
+		current_dir = os.getcwd()
+		image_path = os.path.join(current_dir, filename)
+		cv2.imwrite(image_path, cropped_img)
+		print("Cropped image saved at: ", image_path)
+		counter += 1
 		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR) #[10:y2+10-y1, 10:x2+10-x1], cv2.COLOR_RGB2BGR)
 	sam_centX, sam_centY = cent_x + x1, cent_y + y1
 
