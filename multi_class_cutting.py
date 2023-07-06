@@ -7,9 +7,8 @@ import time
 
 # --------- DEFINE TARGETS HERE --------
 n_pieces = {
-	"Apple": 2,
-	"Cucumber": 0,
-	"Banana": 0
+	"Apple": 0,
+	"Banana": 2
 }
 EVEN = True # heuristic for slice type
 

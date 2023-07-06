@@ -169,10 +169,13 @@ class SkillUtils():
 		if even_heuristic:
 			# find perpendicular vector
 			vector = self._get_perp_vector(vec)
+			print("got perpendicular vector") # TODO: perpendicular vector not working how indended
 		else:
 			vector = vec / np.linalg.norm(vec)
+			print("normalized longest vector")
 		# get rotation of the gripper
 		angle = math.degrees(math.atan(vector[1] / vector[0]))
+		# angle = 0 # uncomment to make it not rotate
 		return com, angle
 
 	def cut(self, count, com, angle):
@@ -346,23 +349,22 @@ class SkillUtils():
 		This function detects if the blade will come into contact with the workspace
 		boarders during cut
 		"""
-		print("\n\npushing away from wall....")
 		tool_dim = 0.18 # x,y in [m]
 		# NOTE: rotation expected in degrees
 		print("Rotation: ", rotation)
 		Lx = abs(0.5*tool_dim*math.sin(rotation))
-		print("math.sin(rotation) ", math.sin(rotation))
-		print("LX: ", Lx)
+		# print("math.sin(rotation) ", math.sin(rotation))
+		# print("LX: ", Lx)
 		Ly = abs(0.5*tool_dim*math.cos(rotation))
-		print("math.cos(rotation) ", math.cos(rotation))
-		print("Ly: ", Ly)
-		print("COM: ", com)
+		# print("math.cos(rotation) ", math.cos(rotation))
+		# print("Ly: ", Ly)
+		# print("COM: ", com)
 		x1 = com[0] - Lx
 		x2 = com[0] + Lx
 		y1 = com[1] - Ly
 		y2 = com[1] + Ly
 		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
-		print("\nTool Bounding Box: ", tool_bb)
+		# print("\nTool Bounding Box: ", tool_bb)
 		# print("Cut EE Pose: ", self.fa.get_pose().translation)
 
 		minx = 0.335 # TODO: verify these values
@@ -408,8 +410,8 @@ class SkillUtils():
 		"""
 		tool_dim = 0.16 # x,y in [m]
 		# NOTE: rotation expected in degrees
-		Lx = 0.5*tool_dim*math.sin(rotation)
-		Ly = 0.5*tool_dim*math.cos(rotation)
+		Lx = abs(0.5*tool_dim*math.sin(rotation))
+		Ly = abs(0.5*tool_dim*math.cos(rotation))
 		x1 = blade_com[0] - Lx
 		x2 = blade_com[0] + Lx
 		y1 = blade_com[1] - Ly
