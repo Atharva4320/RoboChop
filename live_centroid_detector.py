@@ -164,9 +164,12 @@ if __name__ == '__main__':
         cv2.imshow("Camera 3", color_image_3)
         cv2.imshow("Camera 1", color_image_1)
 
-        frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
+        frame_sam, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple, Banana'], sam_centroid=True, display_mask=True)
+        
+        frame_yolo, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple, Banana'], yolo_centroid=True, yolo_all=True)
 
-        cv2.imshow("YOLO", frame)
+        cv2.imshow("SAM", frame_sam)
+        cv2.imshow("YOLO", frame_yolo)
 
 
         if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:

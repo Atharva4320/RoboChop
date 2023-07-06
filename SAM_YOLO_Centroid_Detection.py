@@ -255,6 +255,11 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 
 	print("Actual YOLO result:")
 	print(detections)
+	
+	# [[     340.92      255.37      482.54      405.07     0.79542           1]
+ 	# [     550.61      369.47      629.83      452.81     0.42456           0]
+ 	# [     584.46       296.3       669.2      373.13     0.34875           0]]
+
 
 	print("\nNames: ", names)
 	print("\nBoxes: ", boxes)
