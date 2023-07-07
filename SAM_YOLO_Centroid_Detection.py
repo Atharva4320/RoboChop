@@ -376,7 +376,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 	# Detect objects in frame
 	'''
 	0: 384x640 1 Apple, 3.7ms
-Speed: 1.2ms preprocess, 3.7ms inference, 0.8ms postprocess per image at shape (1, 3, 384, 640)
+	Speed: 1.2ms preprocess, 3.7ms inference, 0.8ms postprocess per image at shape (1, 3, 384, 640)
 
 	'''
 	if yolo_all or poi == '':  # If you want to detect all objects within the frame
