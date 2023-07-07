@@ -380,11 +380,13 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 
 	'''
 	if yolo_all or poi == '':  # If you want to detect all objects within the frame
-		frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
-		return frame, []
+		result_frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
+		return result_frame, []
 	else:
 		# print("Classes to detect: ", len(poi))
-		frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
+		result_frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
+	
+	# print("\nBBOX COORDINATES: ", box_coord)
 
 	# Handle zero coordinates: cent_x, cent_y, poi_area,
 	if len(box_coord) == 0:
@@ -396,21 +398,21 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 	if yolo_centroid:
 		cent_list = []
 		for bc in box_coord:
-			frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, bc[0], bc[1], bc[2], bc[3])
+			result_frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, bc[0], bc[1], bc[2], bc[3])
 			cent_list.append([centroid_x, centroid_y])
-		return frame, cent_list if return_frame else cent_list
+		return result_frame, cent_list if return_frame else cent_list
 			
 	elif sam_centroid:
 		for i in range(len(box_coord)):
 			cent_list = []
 			for bc in box_coord[i]:
-				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, yolo_model, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
 				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 			cent_list_per_item.append(cent_list)
 		# print("In calculate_centroid() function:")
 		# print("Target list size: ", len(poi), " Actual size of returned items: ", len(cent_list_per_item))
 		# print(cent_list_per_item)
-		return frame, cent_list_per_item if return_frame else cent_list_per_item
+		return result_frame, cent_list_per_item if return_frame else cent_list_per_item
 			#cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
 			#cv2.waitKey(0)
 			#cv2.destroyAllWindows()  
@@ -510,7 +512,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
 
 
 
-def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
+def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_mask):
 	"""
 	This function calculates the centroid using SAM 
 	and draws it on the given frame. It also has an option to display the generated mask.
@@ -546,37 +548,89 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	# This function calculates the centroid using sam method
 
 	global counter
-
+	cv2.imshow("FRAME", frame)
 	cropped_image = frame[y1:y2, x1:x2]
-	cv2.imshow("Cropped Image", cropped_image)
-	cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
-	cv2.destroyWindow("Cropped Image")
+	# cv2.imshow("Cropped Image", cropped_image)
+	# cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
+	# cv2.destroyWindow("Cropped Image")
 
 	cropped_mask = mask_generator.generate(cropped_image)
 	
 	print("Cropped mask attributes:")
-	print(type(cropped_mask))
-	print('\n', cropped_mask)
+	# print(type(cropped_mask))
+	# print('\n', cropped_mask)
+	print("Number of masks: ", len(cropped_mask))
+
+	print("\nConstructing mask images...")
+	cv2.imshow("Cropped Image", cropped_image)
+	for mask in cropped_mask:
+		mask_seg = mask['segmentation']
+		image_area = cropped_image.shape[0] * cropped_image.shape[1]
+		# print(f"Mask area: {mask['area']}; Image area: {image_area}; 80%(Image Area): {0.8*image_area}")
+		# print(mask_seg.astype(int))
+		# print(type(mask_seg), mask_seg.shape)
+		bin_mask = (mask_seg * 255).astype(np.uint8)
+		# bin_mask = cv2.resize(bin_mask, (100, 100))
+		# print(f"Size comparison: cropped image = {cropped_image.shape}, mask = {mask_seg.shape}")
+		inverted_mask = cv2.bitwise_not(bin_mask)
+		interested_image = np.copy(cropped_image)
+
+		interested_image[inverted_mask == 255] = 255
+
+		top, bottom, left, right = [5]*4
+		# Define the color of padding (white)
+		color_of_border = [255, 255, 255]
+
+		padded_image = cv2.copyMakeBorder(interested_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
+
+		cv2.imshow("Mask Image", inverted_mask)
+		cv2.imshow("Merged Image", padded_image)
+
+		padded_result = YOLO(padded_image)[0].boxes.data.cpu().numpy()
+		print(padded_result)
+
+		# cv2.moveWindow("Mask Image", 0, 0)
+		# cv2.moveWindow("Merged Image", 100, 0)
+
+		cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
+		
+	# cv2.destroyWindow("Cropped Image")
+	# cv2.destroyWindow("Mask Image")
+	# cv2.destroyWindow("Merged Image")
+			
+		
+
+	'''
+	View masks:
+	- for loop:
+		- convert binary mask where 1 -> 255, 0 -> 0  => (bin_mask * 255).astype(np.uint8)
+		- visualize:
+			cv2.imshow("Mask Image", mask)
+			cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
+			cv2.destroyWindow("Mask Image")
+
+	'''
 	
 
 	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask)
 
 	if display_mask:
-		print("Saving the cropped image...")
-		filename = f'cropped_image_{counter}.jpg'
-		current_dir = os.getcwd()
-		image_path = os.path.join(current_dir, filename)
-		cv2.imwrite(image_path, cropped_image)
-		print("Cropped image saved at: ", image_path)
-		counter += 1
+		# print("Saving the cropped image...")
+		# filename = f'cropped_image_{counter}.jpg'
+		# current_dir = os.getcwd()
+		# image_path = os.path.join(current_dir, filename)
+		# cv2.imwrite(image_path, cropped_image)
+		# print("Cropped image saved at: ", image_path)
+		# counter += 1
+		# result_frame = frame.copy()
 		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR) #[10:y2+10-y1, 10:x2+10-x1], cv2.COLOR_RGB2BGR)
+		
 	sam_centX, sam_centY = cent_x + x1, cent_y + y1
 
 	point1 = [point1[0] + x1, point1[1] + y1]
 	point2 = [point2[0] + x1, point2[1] + y1]
 
-	frame = draw_circle_centroid(frame, sam_centX, sam_centY, mask_area, (0, 255, 0))
-	frame = cv2.line(frame, point1, point2, (255, 0, 0), thickness=3)
+	
 	# frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, (255, 0, 0))
 	# frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, (255, 0, 0))
 	

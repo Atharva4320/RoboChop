@@ -164,7 +164,7 @@ if __name__ == '__main__':
         cv2.imshow("Camera 3", color_image_3)
         cv2.imshow("Camera 1", color_image_1)
 
-        frame_sam, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple, Banana'], sam_centroid=True, display_mask=True)
+        frame_sam, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple', 'Banana'], sam_centroid=True, display_mask=True)
         
         # frame_yolo, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple, Banana'], yolo_centroid=True, yolo_all=True)
 
