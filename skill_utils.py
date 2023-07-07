@@ -281,8 +281,9 @@ class SkillUtils():
 		# print("\nTool Bounding Box: ", tool_bb)
 		# print("Cut EE Pose: ", self.fa.get_pose().translation)
 
-		minx = 0.335 # TODO: verify these values
-		maxx = 0.69 # 0.695
+		# ------ Measured 3D Printed Boundary Positions (with some margin) -------
+		minx = 0.335 
+		maxx = 0.69 
 		miny = -0.235
 		maxy = 0.26
 
