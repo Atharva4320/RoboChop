@@ -247,32 +247,42 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	
 	# If detect_all flag is not set, proceed with finding the target_class
 	detections = results[0].boxes.data.cpu().numpy()
+	detections =  detections[detections[:,-1].argsort()]  # <- Sorting detections according to their class index
 
 	boxes = detections[:, :4]
 	scores = detections[:, 4]
 	classes = detections[:, 5]
 	names = np.array([result.names[class_idx] for class_idx in classes])
 
-	# print("Actual YOLO result:")
-	# print(detections)
-	# # Sort by class index (last column)
-	# sorted_detection = detections[detections[:,-1].argsort()]
-	# print("\nSorted results:")
-	# print(sorted_detection)
+	print("Actual YOLO result:")
+	print(detections)
 
 
-	# print("\nNames: ", names)
-	# print("\nBoxes: ", boxes)
-	# print("\nScores: ", scores)
+	print("\nNames: ", names)
+	print("\nBoxes: ", boxes)
+	print("\nScores: ", scores)
 
-	# box_to_keep = []
+	box_to_keep = []
 	# for i, box in enumerate(boxes):
 	# 	print(f"(x1={box[0]}, y1={box[1]}, x2={box[2]}, y2={box[3]})")
-	# 	cropped_image = image[int(box[1]):int(box[3]), int(box[0]):int(box[2])]
-	# 	cv2.imshow("Cropped Image", cropped_image)
-	# 	cv
-	# 	# cropped_result = model(cropped_image)[0]
-		# cropped_det = cropped_result.boxes.data.cpu().numpy()
+	# 	cropped_image = image[int(box[1] - 5):int(box[3] + 5), int(box[0] - 5):int(box[2] + 5)]
+	# 	# Define the padding
+	# 	top, bottom, left, right = [5]*4
+	# 	# Define the color of padding (white)
+	# 	color_of_border = [255, 255, 255]
+
+	# 	cropped_image = cv2.copyMakeBorder(cropped_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
+	# 	cropped_result = model(cropped_image)[0]
+	# 	cropped_det = cropped_result.boxes.data.cpu().numpy()
+	# 	print("\nCropped detection:")
+	# 	print(cropped_det)
+	# 	if len(cropped_det) != 0:
+
+	# 		cropped_scores = cropped_det[0][4]
+	# 		cropped_name = cropped_result.names[cropped_det[0][5]]
+	# 		print(cropped_name, cropped_scores)
+
+
 
 
 		# print("Actual name: ", np.array([cropped_result.names[class_ind] for class_ind in cropped_det[:, 5]]))
@@ -364,7 +374,11 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 	centroid_x, centroid_y = 0, 0
 	
 	# Detect objects in frame
-	
+	'''
+	0: 384x640 1 Apple, 3.7ms
+	Speed: 1.2ms preprocess, 3.7ms inference, 0.8ms postprocess per image at shape (1, 3, 384, 640)
+
+	'''
 	if yolo_all or poi == '':  # If you want to detect all objects within the frame
 		frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
 		return frame, []
@@ -390,7 +404,6 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		for i in range(len(box_coord)):
 			cent_list = []
 			for bc in box_coord[i]:
-				cropped_img = frame[bc[1]:bc[3], bc[0]:bc[2]]
 				frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
 				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 			cent_list_per_item.append(cent_list)
@@ -535,8 +548,17 @@ def calculate_sam_centroid(frame, mask_generator, x1, y1, x2, y2, display_mask):
 	global counter
 
 	cropped_image = frame[y1:y2, x1:x2]
+	cv2.imshow("Cropped Image", cropped_image)
+	cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
+	cv2.destroyWindow("Cropped Image")
+
 	cropped_mask = mask_generator.generate(cropped_image)
 	
+	print("Cropped mask attributes:")
+	print(type(cropped_mask))
+	print('\n', cropped_mask)
+	
+
 	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask)
 
 	if display_mask:
