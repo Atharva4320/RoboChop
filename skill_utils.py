@@ -340,6 +340,7 @@ class SkillUtils():
 		tool_bb = [[x1, y1], [x2, y2]] # (x1, x2, y1, y2)
 		print("Tool BB: ", tool_bb)
 
+		# TODO: current bug --> we are getting identical bounding boxes as we loop through obj_dict (perhaps vision system issue?)
 		collision_idxs = []
 		for obj_class in obj_dict:
 			for idx in obj_dict[obj_class]:
