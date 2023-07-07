@@ -266,6 +266,12 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 	for i, box in enumerate(boxes):
 		print(f"(x1={box[0]}, y1={box[1]}, x2={box[2]}, y2={box[3]})")
 		cropped_image = image[int(box[1]):int(box[3]), int(box[0]):int(box[2])]
+		# Define the padding
+		top, bottom, left, right = [3]*4
+		# Define the color of padding (white)
+		color_of_border = [255, 255, 255]
+
+		cropped_image = cv2.copyMakeBorder(cropped_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
 		cv2.imshow("Cropped Image", cropped_image)
 		cv2.waitKey(2000)  # Wait for 2000 ms (2 seconds) then close the window
 		cv2.destroyWindow("Cropped Image")
