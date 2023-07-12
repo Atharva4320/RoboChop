@@ -278,6 +278,7 @@ if __name__ == '__main__':
 	HOST_IP = '172.26.69.200'
 	PORT = 12345
 	messenger = PickleMessenger(HOST_IP, PORT, is_host=True)
+	messenger.start()
 
 	## SETUP:
 	#============= Checking for cuda =======================

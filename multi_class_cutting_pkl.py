@@ -28,6 +28,7 @@ TODOs: Fix the following current bugs:
 HOST_IP = '172.26.69.200'
 PORT = 12345
 messenger = PickleMessenger(HOST_IP, PORT, is_host=False)
+messenger.start()
 
 # send message of the target classes to detect
 # object_string = ''
