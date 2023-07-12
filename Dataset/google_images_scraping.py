@@ -109,8 +109,8 @@ https://www.google.com/search?q=cut+cucumber+long&tbm=isch&ved=2ahUKEwiwk-Db39L_
 """
 
 SAVE_FOLDER = 'scraped_data'
-FRUIT_CLASS = 'pineapple'
-GOOGLE_IMAGES = 'https://www.google.com/search?q=pineapple+pieces&tbm=isch&ved=2ahUKEwjD_dPd29n_AhWIM1kFHSACCZcQ2-cCegQIABAA&oq=pineapple+pieces&gs_lcp=CgNpbWcQAzIFCAAQgAQyBQgAEIAEMgUIABCABDIFCAAQgAQyBQgAEIAEMgUIABCABDIFCAAQgAQyBQgAEIAEMgYIABAFEB4yBggAEAUQHjoHCAAQigUQQzoICAAQgAQQsQM6CggAEIoFELEDEEM6DQgAEIoFELEDEIMBEEM6BAgAEANQuxdYs0dgj0hoAHAAeACAAVqIAbcJkgECMTiYAQCgAQGqAQtnd3Mtd2l6LWltZ7ABAMABAQ&sclient=img&ei=druVZMPqHojn5NoPoISkuAk&bih=1328&biw=2488&client=ubuntu&hs=Wwm'
+FRUIT_CLASS = 'carrot'
+GOOGLE_IMAGES = 'https://www.google.com/search?q=slice+carrot&tbm=isch&ved=2ahUKEwj-s-vy7ISAAxUlBGIAHcTFCj4Q2-cCegQIABAA&oq=slice+carrot&gs_lcp=CgNpbWcQAzIGCAAQBxAeMgYIABAHEB4yBggAEAcQHjIGCAAQBxAeMgYIABAHEB4yBggAEAcQHjIGCAAQBxAeMgYIABAHEB4yBggAEAcQHjIGCAAQBxAeOgcIABCKBRBDOgUIABCABDoKCAAQigUQsQMQQzoICAAQgAQQsQNQwgZYwRdg_xdoAnAAeACAAXKIAaMFkgEDOC4xmAEAoAEBqgELZ3dzLXdpei1pbWfAAQE&sclient=img&ei=01isZL7-BKWIiLMPxIur8AM&bih=1328&biw=2488&client=ubuntu&hs=c3K'
 driver = webdriver.Firefox()
 driver.get(GOOGLE_IMAGES)
 
@@ -132,7 +132,7 @@ def scroll_n_times(n):
         time.sleep(0.5)
 
 
-counter = 0
+counter = 509
 for i in range(1,2):
     # scroll_to_end()
     scroll_n_times(5)

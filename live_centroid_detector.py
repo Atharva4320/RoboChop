@@ -120,7 +120,7 @@ if __name__ == '__main__':
         warnings.warn("The file does not exits.")
     
     #============= Loading the YOLO Model =======================
-    model_path_YOLO = os.path.join('Models', 'best_3.pt')
+    model_path_YOLO = os.path.join('Models', 'best.pt')
     print(model_path_YOLO)
 
     if os.path.isfile(model_path_YOLO):
@@ -164,12 +164,14 @@ if __name__ == '__main__':
         cv2.imshow("Camera 3", color_image_3)
         cv2.imshow("Camera 1", color_image_1)
 
-        frame_sam, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple', 'Banana'], sam_centroid=True, display_mask=True)
+        # frame_sam, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple', 'Banana'], sam_centroid=True, display_mask=True)
         
-        # frame_yolo, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple, Banana'], yolo_centroid=True, yolo_all=True)
+        frame_yolo, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi="", yolo_centroid=True, yolo_all=True)
 
-        cv2.imshow("SAM", frame_sam)
-        # cv2.imshow("YOLO", frame_yolo)
+        print("\nCENTROID:")
+        print(centroid_list)
+        # cv2.imshow("SAM", frame_sam)
+        cv2.imshow("YOLO", frame_yolo)
 
 
         if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
@@ -178,17 +180,17 @@ if __name__ == '__main__':
     #     # Save the cam 3 video:
     #     out_3.write(color_image_3)
 
-    #     # frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
+        # frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
         
     #     # frame_2, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi='Apple', yolo_centroid=True, display_mask=False)
         
     #     # # out_1.write(color_image_1)
     #     # cv2.imshow("Frame", frame)
-    #     # cv2.imshow("YOLO frame", frame_2)
+        # cv2.imshow("YOLO frame", frame)
     
-    #     # # Press 'q' or 'esc' to break the loop
-    #     # if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
-    #     #     break
+        # # Press 'q' or 'esc' to break the loop
+        # if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
+        #     break
 
     #     obs_message = udp.ReadReceivedData()
     #     if obs_message == "Segment":
