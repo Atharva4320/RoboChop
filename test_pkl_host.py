@@ -7,5 +7,5 @@ PORT = 12345
 messenger = PickleMessenger(HOST_IP, PORT, is_host=True)
 
 messenger.start()
-
+time.sleep(5)
 messenger.send_object(test_send_dict, "test_dict")
