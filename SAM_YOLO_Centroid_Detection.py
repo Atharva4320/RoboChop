@@ -550,49 +550,54 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_
 	# cv2.destroyWindow("Cropped Image")
 
 	cropped_mask = mask_generator.generate(cropped_image)
-	
-	
-	# print("Cropped mask attributes:")
-	# print(type(cropped_mask))
-	# print('\n', cropped_mask)
-	# print("Number of masks: ", len(cropped_mask))
+	print("Number of masks: ", len(cropped_mask))
 
-	# print("\nConstructing mask images...")
-	# cv2.imshow("Cropped Image", cropped_image)
-	# for mask in cropped_mask:
-	# 	mask_seg = mask['segmentation']
-	# 	image_area = cropped_image.shape[0] * cropped_image.shape[1]
-	# 	# print(f"Mask area: {mask['area']}; Image area: {image_area}; 80%(Image Area): {0.8*image_area}")
-	# 	# print(mask_seg.astype(int))
-	# 	# print(type(mask_seg), mask_seg.shape)
-	# 	bin_mask = (mask_seg * 255).astype(np.uint8)
-	# 	# bin_mask = cv2.resize(bin_mask, (100, 100))
-	# 	# print(f"Size comparison: cropped image = {cropped_image.shape}, mask = {mask_seg.shape}")
-	# 	inverted_mask = cv2.bitwise_not(bin_mask)
-	# 	interested_image = np.copy(cropped_image)
+	cv2.imshow("Cropped Image", cropped_image)
+	image_counter = 0
+	for mask in cropped_mask:
+		mask_seg = mask['segmentation']
+		bin_mask = (mask_seg * 255).astype(np.uint8)
 
-	# 	interested_image[inverted_mask == 255] = 255
+		inverted_mask = cv2.bitwise_not(bin_mask)
+		interested_image = np.copy(cropped_image)
 
-	# 	top, bottom, left, right = [5]*4
-	# 	# Define the color of padding (white)
-	# 	color_of_border = [255, 255, 255]
+		interested_image[inverted_mask == 255] = 255
 
-	# 	padded_image = cv2.copyMakeBorder(interested_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
-
-	# 	cv2.imshow("Mask Image", inverted_mask)
-	# 	cv2.imshow("Merged Image", padded_image)
-
-	# 	padded_result = YOLO(padded_image)[0].boxes.data.cpu().numpy()
-	# 	print(padded_result)
-
-	# 	# cv2.moveWindow("Mask Image", 0, 0)
-	# 	# cv2.moveWindow("Merged Image", 100, 0)
-
-	# 	cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
+		top, bottom, left, right = [5]*4
 		
-	# cv2.destroyWindow("Cropped Image")
-	# cv2.destroyWindow("Mask Image")
-	# cv2.destroyWindow("Merged Image")
+		# Define the color of padding (white)
+		color_of_border = [255, 255, 255]
+
+		padded_image = cv2.copyMakeBorder(interested_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
+
+		cv2.imshow("Mask Image", inverted_mask)
+		cv2.imshow("Merged Image", padded_image)
+		cv2.waitKey(2000)  # Wait for 2000 ms (2 seconds) then close the window
+
+		print("Saving the mask image...")
+		filename_masked = f'masked_image_{image_counter}.jpg'
+		current_dir = os.getcwd()
+		image_path_masked = os.path.join(current_dir, filename_masked)
+		cv2.imwrite(image_path_masked, inverted_mask)
+		print("Masked image saved at: ", image_path_masked)
+
+		print("Saving the merged image...")
+		filename_merged= f'merged_image_{image_counter}.jpg'
+		current_dir = os.getcwd()
+		image_path_merged = os.path.join(current_dir, filename_merged)
+		cv2.imwrite(image_path_merged, padded_image)
+		print("Merged image saved at: ", image_path_merged)
+
+		# padded_result = YOLO(padded_image)[0].boxes.data.cpu().numpy()
+		# print(padded_result)
+
+		# cv2.moveWindow("Mask Image", 0, 0)
+		# cv2.moveWindow("Merged Image", 100, 0)
+		image_counter += 1
+		
+	cv2.destroyWindow("Cropped Image")
+	cv2.destroyWindow("Mask Image")
+	cv2.destroyWindow("Merged Image")
 			
 		
 
