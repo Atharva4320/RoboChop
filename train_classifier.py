@@ -107,3 +107,54 @@ class EarlyStopping():
         print("-"*100)
         torch.save(model.state_dict(), 'best_loss_model.pth')
 
+class Fruits_CNN(nn.Module):
+    def __init__(self,num_channels):
+        super(Fruits_CNN, self).__init__()
+        self.relu = nn.ReLU()
+
+        self.conv1 = nn.Conv2d(in_channels=num_channels, out_channels=16, kernel_size=5, stride=1, padding='same')
+        self.batchnorm1 = nn.BatchNorm2d(16)
+        self.maxpool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # 16*50*50
+
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=1, padding='same')
+        self.batchnorm2 = nn.BatchNorm2d(32)
+        self.maxpool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # 32*25*25
+
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding='same')
+        self.batchnorm3 = nn.BatchNorm2d(64)
+        self.maxpool3 = nn.MaxPool2d(kernel_size=5, stride=5)
+        # 64*5*5 = 1600 >> it is in_features value for the self.linear1
+
+        self.flatten1 = nn.Flatten()
+
+        self.linear1 = nn.Linear(in_features=1600, out_features=512)
+        self.dropout1 = nn.Dropout(p=0.25)
+        self.linear2 = nn.Linear(512, num_classes)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.batchnorm1(out)
+        out = self.relu(out)
+        out = self.maxpool1(out)
+
+        out = self.conv2(out)
+        out = self.batchnorm2(out)
+        out = self.relu(out)
+        out = self.maxpool2(out)
+
+        out = self.conv3(out)
+        out = self.batchnorm3(out)
+        out = self.relu(out)
+        out = self.maxpool3(out)
+
+        out = self.flatten1(out)
+        out = self.linear1(out)
+        out = self.relu(out)
+        out = self.dropout1(out)
+
+        out = self.linear2(out)
+
+        return out
+    

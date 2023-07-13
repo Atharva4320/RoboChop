@@ -86,9 +86,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_16.mp4')
-	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_16.mp4')
-	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_16.mp4')
+	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_18.mp4')
+	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_18.mp4')
+	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_18.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -99,6 +99,11 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 		frames_1 = aligned_stream.process(frames_1)
 		color_frame_1 = frames_1.get_color_frame()
 		color_image_1 = np.asanyarray(color_frame_1.get_data())
+
+		# convert some edge pixels to black
+		print("Color_Image_shape: ", color_image_1.shape)
+		color_image_1[0:30,:] = (0,0,0)
+
 		depth_frame = frames_1.get_depth_frame().as_depth_frame()
 
 		points = point_cloud.calculate(depth_frame)
@@ -154,13 +159,15 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 					
 				# SAM STUFF HERE
 				print('\nSend the coordinates!!\n')
+				print("Saving the original image....")
+				cv2.imwrite('original_frame.jpg', color_image_1)
 
 				result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
 				# print("SAM")
 
 				# frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
 
-
+				
 				# cv2.imshow("Frame", frame)
 				# Copy the image:
 				result_frame_cpy = result_frame.copy()
@@ -221,7 +228,8 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 							
 							# print("Points to append: ", median_point)
 
-							coord_list.append(median_point.tolist())
+							median_point_rounded = np.round(median_point, 4)
+							coord_list.append(median_point_rounded.tolist())
 							prev_loc = coord_list
 					# print("Coord List: ", coord_list)
 					message_list.append(coord_list)
@@ -299,7 +307,7 @@ if __name__ == '__main__':
 		warnings.warn("The file does not exits.")
 	
 	#============= Loading the YOLO Model =======================
-	model_path_YOLO = os.path.join('Models', 'best.pt')
+	model_path_YOLO = os.path.join('Models', 'best_3.pt') 
 	print(model_path_YOLO)
 
 	if os.path.isfile(model_path_YOLO):

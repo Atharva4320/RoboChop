@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     # Define the codec and create a VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_path_1 = os.path.join('Videos/Test Videos', 'cam_1_video.mp4')
+    output_path_1 = os.path.join('Videos/Test Videos', 'YOLO_video.mp4')
     output_path_3 = os.path.join('Videos/Test Videos', 'cam_3_video.mp4')
     out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
     out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
@@ -166,12 +166,13 @@ if __name__ == '__main__':
 
         # frame_sam, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=['Apple', 'Banana'], sam_centroid=True, display_mask=True)
         
-        frame_yolo, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi="", yolo_centroid=True, yolo_all=True)
+        frame_yolo, _ = calculate_centroid(color_image_1, YOLO, SAM, poi="", yolo_centroid=True, yolo_all=True)  # Uncomment to check if YOLO is working fine (returns frame with alkl the bounding boxes)
 
-        print("\nCENTROID:")
-        print(centroid_list)
+        # print("\nCENTROID:")
+        # print(centroid_list)
         # cv2.imshow("SAM", frame_sam)
         cv2.imshow("YOLO", frame_yolo)
+        out_1.write(frame_yolo)
 
 
         if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:

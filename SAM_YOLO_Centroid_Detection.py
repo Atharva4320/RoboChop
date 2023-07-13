@@ -372,13 +372,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		Otherwise, returns only the centroids' coordinates.
 	"""
 	centroid_x, centroid_y = 0, 0
-	
-	# Detect objects in frame
-	'''
-	0: 384x640 1 Apple, 3.7ms
-	Speed: 1.2ms preprocess, 3.7ms inference, 0.8ms postprocess per image at shape (1, 3, 384, 640)
 
-	'''
 	if yolo_all or poi == '':  # If you want to detect all objects within the frame
 		result_frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
 		return result_frame, []
@@ -550,11 +544,13 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_
 	global counter
 	# cv2.imshow("FRAME", frame)
 	cropped_image = frame[y1:y2, x1:x2]
+
 	# cv2.imshow("Cropped Image", cropped_image)
 	# cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
 	# cv2.destroyWindow("Cropped Image")
 
 	cropped_mask = mask_generator.generate(cropped_image)
+	
 	
 	# print("Cropped mask attributes:")
 	# print(type(cropped_mask))
@@ -615,13 +611,19 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_
 	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask)
 
 	if display_mask:
-		# print("Saving the cropped image...")
-		# filename = f'cropped_image_{counter}.jpg'
-		# current_dir = os.getcwd()
-		# image_path = os.path.join(current_dir, filename)
-		# cv2.imwrite(image_path, cropped_image)
-		# print("Cropped image saved at: ", image_path)
-		# counter += 1
+		print("Saving the cropped image...")
+		filename_cropped = f'cropped_image_{counter}.jpg'
+		current_dir = os.getcwd()
+		image_path_cropped = os.path.join(current_dir, filename_cropped)
+		cv2.imwrite(image_path_cropped, cropped_image)
+		print("Cropped image saved at: ", image_path_cropped)
+		print("Saving the segmented cropped image...")
+		filename_cropped_seg = f'cropped_seg_image_{counter}.jpg'
+		current_dir = os.getcwd()
+		image_path_cropped_seg = os.path.join(current_dir, filename_cropped_seg)
+		cv2.imwrite(image_path_cropped_seg, cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR))
+		print("Segmented Cropped image saved at: ", image_path_cropped_seg)
+		counter += 1
 		# result_frame = frame.copy()
 		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR) #[10:y2+10-y1, 10:x2+10-x1], cv2.COLOR_RGB2BGR)
 		
