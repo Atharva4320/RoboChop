@@ -86,9 +86,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_18.mp4')
-	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_18.mp4')
-	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_18.mp4')
+	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_29.mp4')
+	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_29.mp4')
+	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_29.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -101,8 +101,8 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 		color_image_1 = np.asanyarray(color_frame_1.get_data())
 
 		# convert some edge pixels to black
-		print("Color_Image_shape: ", color_image_1.shape)
-		color_image_1[0:30,:] = (0,0,0)
+		# print("Color_Image_shape: ", color_image_1.shape) 480, 848, 3
+		color_image_1[:, 0:75] = (0,0,0)
 
 		depth_frame = frames_1.get_depth_frame().as_depth_frame()
 

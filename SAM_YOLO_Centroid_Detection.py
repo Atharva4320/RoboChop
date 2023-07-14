@@ -14,7 +14,7 @@ import ultralytics
 from ultralytics import YOLO
 
 counter = 0
-
+image_counter = 0
 def show_progress(count, block_size, total_size):
 	"""
 	This function displays the progress of a download operation.
@@ -110,10 +110,10 @@ def find_longest_line(contour, centroid):
 		# 		point2 = p2 # [x,y]
 
 	# print("Points: ", point1, point2)
-	return point1, point2
+	# return point1, point2
 
 
-def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
+def generate_SAM_centroid(image, anns, classifier, target, random_color=False, disp_centroid=False):
 	"""
 	Generate the centroid of the target object in the image based on SAM (Segment Anything Model) segmentation.
 
@@ -137,6 +137,68 @@ def generate_SAM_centroid(image, anns, random_color=False, disp_centroid=False):
 	"""
 	if len(anns) == 0: return
 	
+	print("Number of masks: ", len(anns))
+
+	global image_counter
+	# saved_segmentations = []
+	# poi_mask = []
+	# poi_area = 0 
+	for mask in anns:
+		# print("HERE!")
+		mask_seg = mask['segmentation']
+		bin_mask = (mask_seg * 255).astype(np.uint8)
+
+		inverted_mask = cv2.bitwise_not(bin_mask)
+		interested_image = np.copy(image)
+
+		interested_image[inverted_mask == 255] = 255
+
+		top, bottom, left, right = [10]*4
+		
+		# Define the color of padding (white)
+		color_of_border = [255, 255, 255]
+
+		padded_image = cv2.copyMakeBorder(interested_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
+
+		# cv2.imshow("Mask Image", inverted_mask)
+		# cv2.imshow("Merged Image", padded_image)
+		# cv2.waitKey(2000)  # Wait for 2000 ms (2 seconds) then close the window
+		# cv2.destroyWindow("Mask Image")
+		# cv2.destroyWindow("Merged Image")
+		print(f"\nImage No: {image_counter}")
+		print("Saving the mask image...")
+		filename_masked = f'masked_image_{image_counter}.jpg'
+		current_dir = os.getcwd()
+		image_path_masked = os.path.join(current_dir, filename_masked)
+		cv2.imwrite(image_path_masked, inverted_mask)
+		print("Masked image saved at: ", image_path_masked)
+
+		print("Saving the merged image...")
+		filename_merged= f'merged_image_{image_counter}.jpg'
+		current_dir = os.getcwd()
+		image_path_merged = os.path.join(current_dir, filename_merged)
+		cv2.imwrite(image_path_merged, padded_image)
+		print("Merged image saved at: ", image_path_merged)
+
+	# 	padded_result = classifier(padded_image)[0]  # Sending to model for classification
+
+	# 	cropped_detection = padded_result.boxes.data.cpu().numpy()
+	# 	cropped_names = np.array([padded_result.names[class_idx] for class_idx in cropped_detection[:,5]])
+	# 	print(cropped_names, target)
+	# 	if np.any(cropped_names == target):
+	# 		print(np.any(cropped_names == target))
+	# 		saved_segmentations.append(mask_seg)
+	# 		poi_area += mask['area']		
+
+		image_counter += 1
+	
+	# poi_mask = np.logical_or.reduce(saved_segmentations)
+
+	# print("POI MASK:")
+	# if  poi_mask.dtype == np.bool_:
+	# 	return image, 0, 0, poi_area, [0, 0], [0, 0]
+
+
 	# Compute the centroid of the largest mask
 	image_area = image.shape[0] * image.shape[1]
 	poi = sorted(anns, key=lambda x: x['area'], reverse=True)
@@ -400,7 +462,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		for i in range(len(box_coord)):
 			cent_list = []
 			for bc in box_coord[i]:
-				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, yolo_model, sam_model, bc[0], bc[1], bc[2], bc[3], display_mask)
+				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, yolo_model, sam_model, poi[i], bc[0], bc[1], bc[2], bc[3], display_mask)
 				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 			cent_list_per_item.append(cent_list)
 		# print("In calculate_centroid() function:")
@@ -506,7 +568,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
 
 
 
-def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_mask):
+def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, display_mask):
 	"""
 	This function calculates the centroid using SAM 
 	and draws it on the given frame. It also has an option to display the generated mask.
@@ -550,54 +612,10 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_
 	# cv2.destroyWindow("Cropped Image")
 
 	cropped_mask = mask_generator.generate(cropped_image)
-	print("Number of masks: ", len(cropped_mask))
 
-	cv2.imshow("Cropped Image", cropped_image)
-	image_counter = 0
-	for mask in cropped_mask:
-		mask_seg = mask['segmentation']
-		bin_mask = (mask_seg * 255).astype(np.uint8)
-
-		inverted_mask = cv2.bitwise_not(bin_mask)
-		interested_image = np.copy(cropped_image)
-
-		interested_image[inverted_mask == 255] = 255
-
-		top, bottom, left, right = [5]*4
 		
-		# Define the color of padding (white)
-		color_of_border = [255, 255, 255]
-
-		padded_image = cv2.copyMakeBorder(interested_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color_of_border)
-
-		cv2.imshow("Mask Image", inverted_mask)
-		cv2.imshow("Merged Image", padded_image)
-		cv2.waitKey(2000)  # Wait for 2000 ms (2 seconds) then close the window
-
-		print("Saving the mask image...")
-		filename_masked = f'masked_image_{image_counter}.jpg'
-		current_dir = os.getcwd()
-		image_path_masked = os.path.join(current_dir, filename_masked)
-		cv2.imwrite(image_path_masked, inverted_mask)
-		print("Masked image saved at: ", image_path_masked)
-
-		print("Saving the merged image...")
-		filename_merged= f'merged_image_{image_counter}.jpg'
-		current_dir = os.getcwd()
-		image_path_merged = os.path.join(current_dir, filename_merged)
-		cv2.imwrite(image_path_merged, padded_image)
-		print("Merged image saved at: ", image_path_merged)
-
-		# padded_result = YOLO(padded_image)[0].boxes.data.cpu().numpy()
-		# print(padded_result)
-
-		# cv2.moveWindow("Mask Image", 0, 0)
-		# cv2.moveWindow("Merged Image", 100, 0)
-		image_counter += 1
-		
-	cv2.destroyWindow("Cropped Image")
-	cv2.destroyWindow("Mask Image")
-	cv2.destroyWindow("Merged Image")
+	# cv2.destroyWindow("Cropped Image")
+	
 			
 		
 
@@ -613,7 +631,7 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, x1, y1, x2, y2, display_
 	'''
 	
 
-	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask)
+	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask, YOLO, target)
 
 	if display_mask:
 		print("Saving the cropped image...")
