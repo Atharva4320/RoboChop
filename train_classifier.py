@@ -25,6 +25,7 @@ n_channels = 3
 pre_train = False
 pre_train_path = 'best_loss_model.pth'
 save_path = 'custom_nopretrain.pth'
+device = torch.device('cuda')
 
 # ------- import and process data -------
 if pre_train:
@@ -85,7 +86,7 @@ model = Fruits_CNN(num_channels=n_channels, num_classes=num_classes) #62)
 if pre_train:
     model.load_state_dict(torch.load(pre_train_path))
 
-model = model.cuda()
+model = model.to(device)
 
 loss_fn = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -113,8 +114,8 @@ for epoch in range(epochs):
 
     model.train()
     for i, (inputs, labels) in enumerate(dataloader_train):
-        inputs = inputs.cuda()
-        labels = labels.cuda()
+        inputs = inputs.to(device)
+        labels = labels.to(device)
 
         outputs = model(inputs)
         loss = loss_fn(outputs, labels)
@@ -138,8 +139,8 @@ for epoch in range(epochs):
     model.eval()
 
     for i, (inputs, labels) in enumerate(dataloader_test):
-        inputs = inputs.cuda()
-        labels = labels.cuda()
+        inputs = inputs.to(device)
+        labels = labels.to(device)
 
         outputs = model(inputs)
         loss = loss_fn(outputs, labels)
