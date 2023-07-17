@@ -77,16 +77,15 @@ for object in object_list:
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
 				com, angle = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
 				wall_collision = skills.push_away_from_wall(com, angle)
-
 			# get collision check with other objects in scene
-			while len(obj_dict[object][cut_idx]) > 3:
-				collisions = obj_dict[object][cut_idx][3]
+			print("Dict: ", obj_dict[object][cut_idx])
+			collisions = obj_dict[object][cut_idx][3]
+			# while len(obj_dict[object][cut_idx]) > 3:
+			while len(collisions) > 0:
+				print("collisions: ", collisions)
 				skills.push(com, collisions[0][0], collisions[0][1])
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
-			# while the length > 4: # then there are collisions
-				# get collisions list
-				# push the first object in list out of the way
-				# observe the scene
+
 
 			# ======= OLD COLLISION DETECTION VERSION =======
 			# # check for collisions with other objects
