@@ -15,6 +15,7 @@ import ultralytics
 from ultralytics import YOLO
 import cv2
 import matplotlib.pyplot as plt
+from itertools import chain
 import torchvision.transforms as transforms
 from classifier_model import Fruits_CNN
 
@@ -117,9 +118,9 @@ def get_blade_bb(c_x, c_y, rot_angle):
 	"""
 	Calculate the pixel bounds of the projected blade in the scene
 	"""
-	half_lenth = 50
+	half_lenth = 120 # NOTE: this is in pixels and needs to be tuned
 	x_dist = half_lenth * np.cos(math.radians(rot_angle))
-	y_dist = half_lenth * np.sin(math.radiens(rot_angle))
+	y_dist = half_lenth * np.sin(math.radians(rot_angle))
 	minx = c_x - x_dist
 	maxx = c_x + x_dist
 	miny = c_y - y_dist
@@ -255,11 +256,12 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 		transform_data = transforms.Compose([transforms.ToTensor(),
                                      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                      transforms.Resize((img_height, img_width), antialias=True)])
-		images = transform_data(images)
+		images = transform_data(padded_image)
 		images = torch.unsqueeze(images, dim=0)
 		images = images.cuda()
 		images = images.float()
-		classifier_result = classifier(padded_image)
+		print("\nimages shape: ", images.size())
+		classifier_result = classifier(images)
 		_, class_predicted = torch.max(classifier_result, 1)
 		class_predicted = class_predicted.cpu().detach().numpy()[0]
 		string_pred = label_dict[class_predicted]
@@ -540,10 +542,51 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 		for i in range(len(box_coord)):
 			cent_list = []
 			for bc in box_coord[i]:
-				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, yolo_model, sam_model, poi[i], bc[0], bc[1], bc[2], bc[3], display_mask)
+				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2, angle = calculate_sam_centroid(frame, yolo_model, sam_model, poi[i], bc[0], bc[1], bc[2], bc[3], display_mask)
 				if not (centroid_x == 0 and centroid_y == 0 and mask_area == 0):  # If no false bounding box
-					cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
+					# cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2]) # TODO: OLDER VERSION
+					cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], angle])
 			cent_list_per_item.append(cent_list)
+
+	
+	# ------- ADDED COLLISION DETECTION ---------
+	# iterate through bounding boxes and get idx i
+	for i in range(len(box_coord)):
+		for j in range(len(box_coord[i])):
+			# given centroid and angle generate blade bbox
+			print(cent_list_per_item[i][j])
+			cent_x = cent_list_per_item[i][j][0]
+			cent_y = cent_list_per_item[i][j][1]
+			angle = cent_list_per_item[i][j][7]
+			collisions = []
+
+			for k in range(len(box_coord)):
+				for l in range(len(box_coord[k])):
+					if k != i or l != j:
+						obj_bbox = [[cent_list_per_item[k][l][3], cent_list_per_item[k][l][4]], [cent_list_per_item[k][l][5], cent_list_per_item[k][l][6]]]
+						# check if bboxes intersect
+						if check_collision(obj_bbox, cent_x, cent_y, angle):
+							print("\n====== Collision Detected ========")
+							# get vector from centroid to collision centroid
+							col_x = cent_list_per_item[k][l][0]
+							col_y = cent_list_per_item[k][l][1]
+							dir_vec = np.array([col_x - cent_x, col_y - cent_y])
+							dir_vec = dir_vec / np.linalg.norm(dir_vec)
+
+							# get angle of perpendicular vector
+							push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, dir_vec), -1.0, 1.0))) + 90
+
+							# TODO: get point on SAM mask closest to obj centroid
+							# get point on bbox that is closest to obj centroid
+							push_x = min(max(obj_bbox[0][0], cent_x), obj_bbox[1][0])
+							push_y = min(max(obj_bbox[0][1], cent_y), obj_bbox[1][1])
+
+							# append this point and angle to collisions list
+							collisions.append([push_x, push_y, push_angle])
+			# append collisions to cent_list[i] 
+			cent_list_per_item[i][j].append(collisions)
+
+		print("\n\nCent List: ", cent_list_per_item)
 
 		return result_frame, cent_list_per_item if return_frame else cent_list_per_item
 
@@ -728,13 +771,15 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 		point1 = [point1[0] + x1, point1[1] + y1]
 		point2 = [point2[0] + x1, point2[1] + y1]
 
-	print("\nAngle: ", angle)
+	print("\n-------------->Angle: ", angle)
 
 	
-	frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, angle, (255, 0, 0))
-	frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, angle, (255, 0, 0))
+	# frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, (255, 0, 0))
+	# frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, (255, 0, 0))
+
+	draw_longest_line(frame, point1, point2, angle, (255, 0, 0))
 	
-	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2
+	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2, angle
 
 
 
@@ -771,8 +816,14 @@ def draw_cross_centroid(frame, centX, centY, color):
 	return frame
 
 
+def draw_longest_line(frame, pt1, pt2, angle, color):
+	font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
+	cv2.line(frame, (pt1[0], pt1[1]), (pt2[0], pt2[1]), color, thickness)
+	coordinates_text = f"({angle})"
+	cv2.putText(frame, coordinates_text, (pt1[0] - 50, pt1[1] - 10), font, size, color, thickness)
+	return frame
 
-def draw_circle_centroid(frame, centX, centY, area, angle, color):
+def draw_circle_centroid(frame, centX, centY, area, color):
 	"""
 	This function draws circle centroid on the given frame.
 
@@ -798,7 +849,7 @@ def draw_circle_centroid(frame, centX, centY, area, angle, color):
 	# This function draws circle centroid on the frame
 	cv2.circle(frame, (centX, centY), radius=5, color=color, thickness=cv2.FILLED)
 	font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
-	coordinates_text = f"({centX}, {centY}, {area}, {angle})"
+	coordinates_text = f"({centX}, {centY}, {area})"
 	cv2.putText(frame, coordinates_text, (centX - 50, centY - 10), font, size, color, thickness)
 	return frame
 

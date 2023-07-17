@@ -183,7 +183,6 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 					else: 
 						prev_loc = []
 						for centroids in centroid_list[i]:
-							
 						# centroids[0] -> centroid_x
 						# centroids[1] -> centroid_y
 						# centroids[2] -> mask_area
@@ -191,8 +190,8 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 						# centroids[4] -> bc[1] -> y1
 						# centroids[5] -> bc[2] -> x2
 						# centroids[6] -> bc[3] -> y2
-						# centroids[7] -> lp_1 -> [x,y]
-						# centroids[8] -> lp_2 -> [x,y]
+						# centroids[7] -> angle -> th
+						# centroids[8] -> collisions -> [[x,y,angle],[x,y,angle]]
 
 							cv2.rectangle(result_frame_cpy, (centroids[3], centroids[4]), (centroids[5], centroids[6]), (0, 0, 255), 2)
 							# cv2.imshow("Result frame", result_frame_cpy)
@@ -209,22 +208,70 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 							y_pos = np.median(ys)
 							z_pos = z
 
-							corner1 = verts[int(centroids[4]), int(centroids[3])].reshape(-1,3)
-							corner2 = verts[int(centroids[6]), int(centroids[5])].reshape(-1,3)
-						
-							# print(centroids[7])
-
-							lp1 = verts[int(centroids[7][1]), int(centroids[7][0])].reshape(-1,3)
-							lp2 = verts[int(centroids[8][1]), int(centroids[8][0])].reshape(-1,3)
-
 							# print("x_pos, y_pos", x_pos, y_pos)
 
 			### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
 							y_pos = -y_pos
 							x_pos = -x_pos
 
-							median_point = np.array([x_pos, y_pos, z_pos, centroids[2], corner1[:, 0][0], corner1[:, 1][0], corner1[:, 2][0], corner2[:, 0][0], corner2[:, 1][0],
-					corner2[:, 2][0], lp1[:, 0][0], lp1[:, 1][0], lp1[:, 2][0], lp2[:, 0][0], lp2[:, 1][0], lp2[:, 2][0]])
+							# NOTE: this will now vary in length based on if collisions were detected (if len == 5 --> no collisions)
+							median_list = [x_pos, y_pos, z_pos, centroids[2], centroids[7]]
+							for i in range(len(centroids[8])):
+								x_pixel_push = centroids[8][i][0]
+								y_pixel_push = centroids[8][i][1]
+
+								push = verts[int(y_pixel_push), int(x_pixel_push)].reshape(-1,3)
+								angle_push = centroids[8][i][2]
+								median_list.append(push[:, 0][0]) # x
+								median_list.append(push[:, 1][0]) # y
+								median_list.append(push[:, 2][0]) # z
+								median_list.append(angle_push)
+							median_point = np.array(median_list)
+							print("\nMedian Point: ", median_point)
+
+
+						# ===================== OLD VERSION WITHOUT COLLISION DETECTION ========================
+			# 			# centroids[0] -> centroid_x
+			# 			# centroids[1] -> centroid_y
+			# 			# centroids[2] -> mask_area
+			# 			# centroids[3] -> bc[0] -> x1
+			# 			# centroids[4] -> bc[1] -> y1
+			# 			# centroids[5] -> bc[2] -> x2
+			# 			# centroids[6] -> bc[3] -> y2
+			# 			# centroids[7] -> lp_1 -> [x,y]
+			# 			# centroids[8] -> lp_2 -> [x,y]
+
+			# 				cv2.rectangle(result_frame_cpy, (centroids[3], centroids[4]), (centroids[5], centroids[6]), (0, 0, 255), 2)
+			# 				# cv2.imshow("Result frame", result_frame_cpy)
+			# 				# cv2.waitkey(0)
+			# 				print(f"\ncentroid: ({centroids[1]}, {centroids[0]})", "area: ", centroids[2])
+			# 				obj_points = verts[int(centroids[1]-10) : int(centroids[1]+10), int(centroids[0]-10) : int(centroids[0]+10)].reshape(-1,3)
+						
+			# 				zs = obj_points[:,2]
+			# 				z = np.median(zs)
+			# 				xs = obj_points[:,0]
+			# 				ys = obj_points[:,1]
+			# 				ys = np.delete(ys, np.where((zs < z - 1) | (zs > z + 1))) # take only y for close z to prevent including background <-  #TODO Try removing
+			# 				x_pos = np.median(xs)
+			# 				y_pos = np.median(ys)
+			# 				z_pos = z
+
+			# 				corner1 = verts[int(centroids[4]), int(centroids[3])].reshape(-1,3)
+			# 				corner2 = verts[int(centroids[6]), int(centroids[5])].reshape(-1,3)
+						
+			# 				# print(centroids[7])
+
+			# 				lp1 = verts[int(centroids[7][1]), int(centroids[7][0])].reshape(-1,3)
+			# 				lp2 = verts[int(centroids[8][1]), int(centroids[8][0])].reshape(-1,3)
+
+			# 				# print("x_pos, y_pos", x_pos, y_pos)
+
+			# ### FIX ->      ### THIS NEEDS TO BE DONE PROPER###
+			# 				y_pos = -y_pos
+			# 				x_pos = -x_pos
+
+			# # 				median_point = np.array([x_pos, y_pos, z_pos, centroids[2], corner1[:, 0][0], corner1[:, 1][0], corner1[:, 2][0], corner2[:, 0][0], corner2[:, 1][0],
+			# 		corner2[:, 2][0], lp1[:, 0][0], lp1[:, 1][0], lp1[:, 2][0], lp2[:, 0][0], lp2[:, 1][0], lp2[:, 2][0]])
 							
 							# print("Points to append: ", median_point)
 

@@ -11,13 +11,14 @@ pre_train_path = 'custom_nopretrain.pth'
 img_height = 100
 img_width = 100
 n_channels = 3
+device = torch.device('cuda')
 transform_data = transforms.Compose([transforms.ToTensor(),
                                      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                      transforms.Resize((img_height, img_width), antialias=True)])
 
 model = Fruits_CNN(num_channels=n_channels, num_classes=6) #74)
 model.load_state_dict(torch.load(pre_train_path))
-model = model.cuda()
+model = model.to(device)
 model.eval()
 
 
@@ -35,8 +36,9 @@ plt.show()
 
 images = transform_data(images)
 images = torch.unsqueeze(images, dim=0)
-images = images.cuda()
+images = images.to(device)
 images = images.float()
+print("image shape: ", images.size())
 
 outputs = model(images)
 _, predicted = torch.max(outputs, 1)
