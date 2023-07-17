@@ -9,13 +9,26 @@ import numpy as np
 import PIL
 import time
 import math
-import os
+import os, os.path
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 import ultralytics
 from ultralytics import YOLO
+import cv2
+import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
+from classifier_model import Fruits_CNN
+
 
 counter = 0
 image_counter = 0
+n_channels = 3
+
+pre_train_path = 'custom_nopretrain.pth'
+classifier = Fruits_CNN(num_channels=n_channels, num_classes=6)
+classifier.load_state_dict(torch.load(pre_train_path))
+classifier = classifier.cuda()
+classifier.eval()
+
 def show_progress(count, block_size, total_size):
 	"""
 	This function displays the progress of a download operation.
@@ -231,15 +244,30 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 		
 		#Run the classifier to classify the padded image -> returns label name ('string')
 		#---------------------------------------------------------------------------------
-	# 	padded_result = classifier(padded_image)[0]  # Sending to model for classification
-
-	# 	cropped_detection = padded_result.boxes.data.cpu().numpy()
-	# 	cropped_names = np.array([padded_result.names[class_idx] for class_idx in cropped_detection[:,5]])
-	# 	print(cropped_names, target)
+		label_dict = {0: 'Apple',
+              1: 'Carrot',
+              2: 'Cucumber',
+              3: 'Lime',
+              4: 'Orange',
+              5: 'Pineapple'}
+		img_height = 100
+		img_width = 100
+		transform_data = transforms.Compose([transforms.ToTensor(),
+                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                     transforms.Resize((img_height, img_width), antialias=True)])
+		images = transform_data(images)
+		images = torch.unsqueeze(images, dim=0)
+		images = images.cuda()
+		images = images.float()
+		classifier_result = classifier(padded_image)
+		_, class_predicted = torch.max(classifier_result, 1)
+		class_predicted = class_predicted.cpu().detach().numpy()[0]
+		string_pred = label_dict[class_predicted]
+		print("Classifier prediction: ", string_pred)
 		#---------------------------------------------------------------------------------
 		
 		# cropped_name is the name of the label outputed by the classifer
-		if cropped_name == target:
+		if string_pred == target:
 			updated_masks_seg.append(mask_seg)
 			updated_masks_area.append(mask['area'])
 
@@ -675,7 +703,7 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	'''
 	
 
-	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2, angle = generate_SAM_centroid(cropped_image, cropped_mask, YOLO, target)
+	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2, angle = generate_SAM_centroid(cropped_image, cropped_mask, classifier, target)
 
 
 	if display_mask and mask_area != 0:
@@ -892,6 +920,3 @@ if __name__ == '__main__':
 	video.release()
 	output_video.release()
 	cv2.destroyAllWindows()
-
-  
-
