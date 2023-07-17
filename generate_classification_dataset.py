@@ -94,7 +94,8 @@ label_dict = {
     'Cucumber Ripe': 'Cucumber',
     'Lemon': 'Lemon',
     'Peach 2': 'Peach',     
-    'Plum 2': 'Plum',   
+    'Plum 2': 'Plum',  
+    'Cherry Rainier': 'Cherry', 
     'Tomato Heart': 'Tomato',
     'Banana': 'Banana',
     'Cucumber Ripe 2': 'Cucumber',  
@@ -114,7 +115,11 @@ label_dict = {
     'Pear Forelle': 'Pear',      
     'Potato Red Washed': 'Potato',
     'Mango Red': 'Mango',
-    'Pear Kaiser': 'Pear'
+    'Pear Kaiser': 'Pear',
+    'Grapefruit Pink': 'Grapefruit',
+    'Grapefruit White': 'Grapefruit',
+    'Nectarine': 'Nectarine',
+    'Nectarine Flat': 'Nectarine'
 }
 
 file_counts = {
@@ -123,6 +128,7 @@ file_counts = {
     'Grape': 0,
     'Pear': 0,
     'Potato': 0,
+    'Plum': 0,
     'Strawberry': 0,
     'Cherry': 0,
     'Onion': 0,
@@ -135,20 +141,40 @@ file_counts = {
     'Cucumber': 0,
     'Banana': 0,
     'Mango': 0,
+    'Grapefruit': 0,
+    'Nectarine': 0
 }
 
-dataset_path = '/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/Training'
-new_path = '/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/General_Classes/Training'
+dataset_path = '/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/Test'
+new_path = '/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/General_Classes/Test'
 
 for folder in tqdm(os.listdir(dataset_path)):
     if folder in label_dict:
         new_label = label_dict[folder]
         # if new_label folder doesn't exist at new_path, make the folder
+        if not os.path.isdir(new_path + '/' + new_label):
+            os.makedirs(new_path + '/' + new_label)
+        
         # iterate through folder
+        for filename in tqdm(os.listdir(dataset_path + '/' + folder)):
+            if os.path.isfile(dataset_path + '/' + folder + '/' + filename):
+                img = cv2.imread(dataset_path + '/' + folder + '/' + filename)
+                cv2.imwrite(new_path + '/' + new_label + '/' + str(file_counts[new_label]) + '_100.jpg', img)
+                file_counts[new_label]+=1
             # import image
             # rename based on the count for new_label
             # save to new folder
             # file_counts[new_label]+=1
+    else:
+        # copy over all the files within the folder
+        if not os.path.isdir(new_path + '/' + folder):
+            os.makedirs(new_path + '/' + folder)
+        
+        # iterate through folder
+        for filename in tqdm(os.listdir(dataset_path + '/' + folder)):
+            if os.path.isfile(dataset_path + '/' + folder + '/' + filename):
+                img = cv2.imread(dataset_path + '/' + folder + '/' + filename)
+                cv2.imwrite(new_path + '/' + folder + '/' + filename, img)
 
 # iterate through all of the folders of fruits360
     # if the folder is within a specific dictionary, add it to the dictionary value folder instead

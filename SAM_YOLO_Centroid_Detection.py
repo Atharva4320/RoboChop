@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import PIL
 import time
+import math
 import os
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 import ultralytics
@@ -85,6 +86,51 @@ def find_longest_line(contour, centroid):
 	y2 = 2 * centroid[1] - y1
 
 	return [x1, y1], [x2, y2]
+
+def get_rotation_angle(point1, point2, EVEN=False):
+	"""
+	Return the angle to rotate the gripper to be at given the two points indicating the longest
+	line and the cut heuristic (even --> perpendicular, odd --> parallel).
+	"""
+	base_vec = np.array([1, 0])
+	dir_vec = np.array([point2[0] - point1[0], point2[1] - point1[1]])
+	dir_vec = dir_vec / np.linalg.norm(dir_vec)
+	angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0)))
+	if EVEN:
+		angle+=90
+	return angle
+
+def get_blade_bb(c_x, c_y, rot_angle):
+	"""
+	Calculate the pixel bounds of the projected blade in the scene
+	"""
+	half_lenth = 50
+	x_dist = half_lenth * np.cos(math.radians(rot_angle))
+	y_dist = half_lenth * np.sin(math.radiens(rot_angle))
+	minx = c_x - x_dist
+	maxx = c_x + x_dist
+	miny = c_y - y_dist
+	maxy = c_y + y_dist 
+	return [[minx, miny], [maxx, maxy]]
+
+def check_collision(bbox, c_x, c_y, rot_angle):
+	"""
+	Check if the line is in collision with the bounding box, return True/False.
+	"""
+	blade_bb = get_blade_bb(c_x, c_y, rot_angle)
+
+	if blade_bb[0][0] > bbox[1][0]:
+		return False
+	elif blade_bb[1][0] < bbox[0][0]:
+		return False
+	elif blade_bb[0][1] > bbox[1][1]:
+		return False
+	elif blade_bb[1][1] < bbox[0][1]:
+		return False
+	else:
+		return True
+	
+	
 
 
 		# slope_1 = (centroid[1] - p1[1]) / (centroid[0] - p1[0])
@@ -221,6 +267,9 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 	
 	cont = contours[0].reshape(contours[0].shape[0], 2)
 	point1, point2 = find_longest_line(cont, [cent_x, cent_y])  #TODO: FIX IT LATER
+	
+	angle = get_rotation_angle(point1, point2)
+	
 	# cv2.imshow("Mask", poi_mask)
 	# cv2.waitKey(1000)
 	# print(len(contours))
@@ -255,7 +304,7 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 	# Combine the masked foreground and the background
 	output_img = cv2.add(cv2.bitwise_and(img_, mask), cv2.bitwise_and(image, cv2.bitwise_not(mask)))
 
-	return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y, poi_area, point1, point2
+	return cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB), cent_x, cent_y, poi_area, point1, point2, angle
 
 
 
@@ -631,7 +680,7 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	'''
 	
 
-	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2 = generate_SAM_centroid(cropped_image, cropped_mask, YOLO, target)
+	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2, angle = generate_SAM_centroid(cropped_image, cropped_mask, YOLO, target)
 
 	if display_mask:
 		print("Saving the cropped image...")
@@ -655,9 +704,11 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	point1 = [point1[0] + x1, point1[1] + y1]
 	point2 = [point2[0] + x1, point2[1] + y1]
 
+	print("\nAngle: ", angle)
+
 	
-	# frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, (255, 0, 0))
-	# frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, (255, 0, 0))
+	frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, angle, (255, 0, 0))
+	frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, angle, (255, 0, 0))
 	
 	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2
 
@@ -697,7 +748,7 @@ def draw_cross_centroid(frame, centX, centY, color):
 
 
 
-def draw_circle_centroid(frame, centX, centY, area, color):
+def draw_circle_centroid(frame, centX, centY, area, angle, color):
 	"""
 	This function draws circle centroid on the given frame.
 
@@ -723,7 +774,7 @@ def draw_circle_centroid(frame, centX, centY, area, color):
 	# This function draws circle centroid on the frame
 	cv2.circle(frame, (centX, centY), radius=5, color=color, thickness=cv2.FILLED)
 	font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
-	coordinates_text = f"({centX}, {centY}, {area})"
+	coordinates_text = f"({centX}, {centY}, {area}, {angle})"
 	cv2.putText(frame, coordinates_text, (centX - 50, centY - 10), font, size, color, thickness)
 	return frame
 
