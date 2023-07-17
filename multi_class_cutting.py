@@ -7,8 +7,7 @@ import time
 
 # --------- DEFINE TARGET PIECES HERE --------
 n_pieces = {
-	"Apple": 3,
-	"Banana": 0
+	"Apple": 3
 }
 EVEN = True # heuristic for slice type 
 
@@ -78,17 +77,29 @@ for object in object_list:
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
 				com, angle = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
 				wall_collision = skills.push_away_from_wall(com, angle)
-			# check for collisions with other objects
-			collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle, cut_idx)  
-			while len(collisions) > 0:
-				print("Found ", len(collisions), " collisions")
-				for push_obj_com, _ in collisions:
-					print("\nPush obj com -- should just be x,y: ", push_obj_com)
-					skills.push(com, push_obj_com)
+
+			# get collision check with other objects in scene
+			while len(obj_dict[object][cut_idx]) > 3:
+				collisions = obj_dict[object][cut_idx][3]
+				skills.push(com, collisions[0][0], collisions[0][1])
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
-				collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle, cut_idx)
-			# when no collisions, execute cut action
-			print("No found collisions")
+			# while the length > 4: # then there are collisions
+				# get collisions list
+				# push the first object in list out of the way
+				# observe the scene
+
+			# ======= OLD COLLISION DETECTION VERSION =======
+			# # check for collisions with other objects
+			# collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle, cut_idx)  
+			# while len(collisions) > 0:
+			# 	print("Found ", len(collisions), " collisions")
+			# 	for push_obj_com, _ in collisions:
+			# 		print("\nPush obj com -- should just be x,y: ", push_obj_com)
+			# 		skills.push(com, push_obj_com)
+			# 	obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
+			# 	collisions = skills.check_cut_collisions_multiclass(com, obj_dict, angle, cut_idx)
+			# # when no collisions, execute cut action
+			# print("No found collisions")
 			count = skills.cut_multiclass(count, com, angle, object)
 			obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
 
