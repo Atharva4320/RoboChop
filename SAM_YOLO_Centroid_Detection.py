@@ -189,6 +189,8 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 	# saved_segmentations = []
 	# poi_mask = []
 	# poi_area = 0 
+	updated_masks_seg = []
+	updated_masks_area = []
 	for mask in anns:
 		# print("HERE!")
 		mask_seg = mask['segmentation']
@@ -225,40 +227,43 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 		image_path_merged = os.path.join(current_dir, filename_merged)
 		cv2.imwrite(image_path_merged, padded_image)
 		print("Merged image saved at: ", image_path_merged)
-
+		image_counter += 1
+		
+		#Run the classifier to classify the padded image -> returns label name ('string')
+		#---------------------------------------------------------------------------------
 	# 	padded_result = classifier(padded_image)[0]  # Sending to model for classification
 
 	# 	cropped_detection = padded_result.boxes.data.cpu().numpy()
 	# 	cropped_names = np.array([padded_result.names[class_idx] for class_idx in cropped_detection[:,5]])
 	# 	print(cropped_names, target)
-	# 	if np.any(cropped_names == target):
-	# 		print(np.any(cropped_names == target))
-	# 		saved_segmentations.append(mask_seg)
-	# 		poi_area += mask['area']		
+		#---------------------------------------------------------------------------------
+		
+		# cropped_name is the name of the label outputed by the classifer
+		if cropped_name == target:
+			updated_masks_seg.append(mask_seg)
+			updated_masks_area.append(mask['area'])
 
-		image_counter += 1
+	if len(updated_masks_seg) == 0:
+		# False bounding box:
+		return image, 0, 0, 0, [0, 0], [0, 0]
+
+	elif len(updated_masks_seg) > 1:
+		# Combine all masks using logical OR operation
+		combined_mask = np.logical_or.reduce(updated_masks_seg)
+		# Replace the list with the combined mask
+		updated_masks_seg = [combined_mask]
+
+		 # Add up all the mask areas
+		total_area = sum(updated_masks_area)
+		# Replace the list with the total area
+		updated_masks_area = [total_area]
+
 	
-	# poi_mask = np.logical_or.reduce(saved_segmentations)
-
-	# print("POI MASK:")
-	# if  poi_mask.dtype == np.bool_:
-	# 	return image, 0, 0, poi_area, [0, 0], [0, 0]
-
-
-	# Compute the centroid of the largest mask
-	image_area = image.shape[0] * image.shape[1]
-	poi = sorted(anns, key=lambda x: x['area'], reverse=True)
-	poi_mask = poi[0]['segmentation']
-	poi_area = poi[0]['area']
-
-	# print("POI_mask: ", poi_mask)
-	# if poi_area <= (0.65*image_area):
-	# 	poi_mask = poi_mask | poi[1]['segmentation']
-	# 	poi_area += poi[1]['area']
+	# Compute the centroid of the mask that contains the target
+	poi_mask = updated_masks_seg[0]
+	poi_area = updated_masks_area[0]
 
 	cent_x, cent_y = get_centroid(poi_mask)
-
-	# print("Image area: ", image_area, "poi area: ", poi_area)
 	
 	poi_mask = (poi_mask * 255).astype(np.uint8)
 	
@@ -276,10 +281,6 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 	# print(cont)
 	# print(cont.shape)
 	# img_cp = image.copy()
-
-	# cv2.drawContours(img_cp, contours[0], -1, (0, 255, 0), 3)
-	# cv2.imshow("Contours", img_cp)
-	# cv2.waitKey()
 
 	# Create a filled colored mask and apply it to the image
 	color = (255, 165, 0) if not random_color else tuple(np.random.randint(0, 255, 3).tolist())
@@ -512,18 +513,12 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 			cent_list = []
 			for bc in box_coord[i]:
 				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2 = calculate_sam_centroid(frame, yolo_model, sam_model, poi[i], bc[0], bc[1], bc[2], bc[3], display_mask)
-				cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
+				if not (centroid_x == 0 and centroid_y == 0 and mask_area == 0):  # If no false bounding box
+					cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2])
 			cent_list_per_item.append(cent_list)
-		# print("In calculate_centroid() function:")
-		# print("Target list size: ", len(poi), " Actual size of returned items: ", len(cent_list_per_item))
-		# print(cent_list_per_item)
+
 		return result_frame, cent_list_per_item if return_frame else cent_list_per_item
-			#cv2.imshow('frame 2: ({}, {})'.format(centroid_x, centroid_y), frame)
-			#cv2.waitKey(0)
-			#cv2.destroyAllWindows()  
-	#cv2.imshow('frame 3: ({}, {})'.format(centroid_x, centroid_y), frame)
-	#cv2.waitKey(0)
-	#cv2.destroyAllWindows()
+
 
 
 
@@ -682,7 +677,8 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 
 	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2, angle = generate_SAM_centroid(cropped_image, cropped_mask, YOLO, target)
 
-	if display_mask:
+
+	if display_mask and mask_area != 0:
 		print("Saving the cropped image...")
 		filename_cropped = f'cropped_image_{counter}.jpg'
 		current_dir = os.getcwd()
@@ -696,13 +692,13 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 		cv2.imwrite(image_path_cropped_seg, cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR))
 		print("Segmented Cropped image saved at: ", image_path_cropped_seg)
 		counter += 1
-		# result_frame = frame.copy()
-		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR) #[10:y2+10-y1, 10:x2+10-x1], cv2.COLOR_RGB2BGR)
-		
-	sam_centX, sam_centY = cent_x + x1, cent_y + y1
+		frame[y1:y2, x1:x2] = cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR)
 
-	point1 = [point1[0] + x1, point1[1] + y1]
-	point2 = [point2[0] + x1, point2[1] + y1]
+	if cent_x != 0 and cent_y != 0 and mask_area != 0:
+		sam_centX, sam_centY = cent_x + x1, cent_y + y1
+
+		point1 = [point1[0] + x1, point1[1] + y1]
+		point2 = [point2[0] + x1, point2[1] + y1]
 
 	print("\nAngle: ", angle)
 
