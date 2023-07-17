@@ -2,17 +2,9 @@ import numpy as np
 import torch
 import cv2
 import os, os.path
-import math
-from torchsummary import summary
-from datetime import datetime
 import matplotlib.pyplot as plt
-import torch.nn as nn
-import torch.optim as optim
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
-from torchvision.datasets import ImageFolder
-import matplotlib.image as mpimg
-from classifier_model  import *
+from classifier_model import Fruits_CNN
 
 pre_train_path = 'custom_nopretrain.pth'
 
@@ -43,13 +35,13 @@ plt.show()
 
 images = transform_data(images)
 images = torch.unsqueeze(images, dim=0)
-print(images.size())
 images = images.cuda()
 images = images.float()
 
 outputs = model(images)
 _, predicted = torch.max(outputs, 1)
 predicted = predicted.cpu().detach().numpy()[0]
+string_pred = label_dict[predicted]
 
 print("Predicted Number: ", predicted)
 print("Predicted Class: ", label_dict[predicted])
