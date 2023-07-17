@@ -160,7 +160,6 @@ class SkillUtils():
 				com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 				# --------- FINAL 3D POINT IN FRANKA WORLD FRAME ----------
 				com = np.array([com[0], com[1] + 0.065, com[2] + 0.02]) # should be the x,y,z position in robot frame
-				print("COM: ", com)
 				if len(element) > 4:
 					collisions = []
 					
@@ -465,7 +464,7 @@ class SkillUtils():
 	def push(self, cut_obj_com, push_com, push_angle):
 		"""
 		"""
-		dir_vector = (push_com - cut_obj_com) / np.linalg.norm(push_com - cut_obj_com)
+		dir_vector = (push_com[0:2] - cut_obj_com[0:2]) / np.linalg.norm(push_com[0:2] - cut_obj_com[0:2])
 		print("dir vector: ", dir_vector)
 		pose = self.fa.get_pose()
 		rot_matrix = self._get_rot_matrix(self.og_rotation, push_angle) 
