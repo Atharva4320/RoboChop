@@ -222,8 +222,8 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 
 								push = verts[int(y_pixel_push), int(x_pixel_push)].reshape(-1,3)
 								angle_push = centroids[8][i][2]
-								median_list.append(push[:, 0][0]) # x
-								median_list.append(push[:, 1][0]) # y
+								median_list.append(-push[:, 0][0]) # x
+								median_list.append(-push[:, 1][0]) # y
 								median_list.append(push[:, 2][0]) # z
 								median_list.append(angle_push)
 							median_point = np.array(median_list)
