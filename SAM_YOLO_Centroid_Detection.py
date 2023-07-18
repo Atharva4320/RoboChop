@@ -382,6 +382,13 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 		img = result.plot()
 		return img, []
 
+	cv2.imshow('Detected Objects', result.plot())
+
+	# Wait for 'q' key to close the image
+	while True:
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			cv2.destroyWindow('Detected Objects')
+			break
 	
 	# If detect_all flag is not set, proceed with finding the target_class
 	detections = results[0].boxes.data.cpu().numpy()

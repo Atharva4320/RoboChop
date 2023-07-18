@@ -167,7 +167,12 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 
 				# frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
 
-				
+				cv2.imshow("SAM Visualization", result_frame)
+				while True:
+					if cv2.waitKey(1) & 0xFF == ord('q'):
+						cv2.destroyWindow('SAM Visualization')
+						break
+
 				# cv2.imshow("Frame", frame)
 				# Copy the image:
 				result_frame_cpy = result_frame.copy()
