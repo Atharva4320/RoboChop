@@ -86,9 +86,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_1_video_SAM_refined_29.mp4')
-	output_path_3 = os.path.join('Videos/Test Videos/SAM_refined', 'cam_3_video_SAM_refined_29.mp4')
-	output_path_mask = os.path.join('Videos/Test Videos/SAM_refined', 'mask_video_SAM_refined_29.mp4')
+	output_path_1 = os.path.join('Videos/Experiment Videos', 'cam_1_video_experiment_1.mp4')
+	output_path_3 = os.path.join('Videos/Experiment Videos', 'cam_3_video_experiment_1.mp4')
+	output_path_mask = os.path.join('Videos/Experiment Videos', 'mask_video_experiment_1.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -162,16 +162,20 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 				print("Saving the original image....")
 				cv2.imwrite('original_frame.jpg', color_image_1)
 
+				color_image_1[:, 0:75] = (0,0,0)
+				img_shape = color_image_1.shape
+				color_image_1[:, img_shape[1]-85:-1] = (0,0,0)
+
 				result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
 				# print("SAM")
 
 				# frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
 
-				cv2.imshow("SAM Visualization", result_frame)
-				while True:
-					if cv2.waitKey(1) & 0xFF == ord('q'):
-						cv2.destroyWindow('SAM Visualization')
-						break
+				# cv2.imshow("SAM Visualization", result_frame)
+				# while True:
+				# 	if cv2.waitKey(1) & 0xFF == ord('q'):
+				# 		cv2.destroyWindow('SAM Visualization')
+				# 		break
 
 				# cv2.imshow("Frame", frame)
 				# Copy the image:
@@ -221,16 +225,17 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 
 							# NOTE: this will now vary in length based on if collisions were detected (if len == 5 --> no collisions)
 							median_list = [x_pos, y_pos, z_pos, centroids[2], centroids[7]]
-							for i in range(len(centroids[8])):
-								x_pixel_push = centroids[8][i][0]
-								y_pixel_push = centroids[8][i][1]
+							if len(centroids) > 8:
+								for i in range(len(centroids[8])):
+									x_pixel_push = centroids[8][i][0]
+									y_pixel_push = centroids[8][i][1]
 
-								push = verts[int(y_pixel_push), int(x_pixel_push)].reshape(-1,3)
-								angle_push = centroids[8][i][2]
-								median_list.append(-push[:, 0][0]) # x
-								median_list.append(-push[:, 1][0]) # y
-								median_list.append(push[:, 2][0]) # z
-								median_list.append(angle_push)
+									push = verts[int(y_pixel_push), int(x_pixel_push)].reshape(-1,3)
+									angle_push = centroids[8][i][2]
+									median_list.append(-push[:, 0][0]) # x
+									median_list.append(-push[:, 1][0]) # y
+									median_list.append(push[:, 2][0]) # z
+									median_list.append(angle_push)
 							median_point = np.array(median_list)
 							print("\nMedian Point: ", median_point)
 
@@ -359,7 +364,7 @@ if __name__ == '__main__':
 		warnings.warn("The file does not exits.")
 	
 	#============= Loading the YOLO Model =======================
-	model_path_YOLO = os.path.join('Models', 'best_3.pt') 
+	model_path_YOLO = os.path.join('Models', 'best_13.pt') 
 	print(model_path_YOLO)
 
 	if os.path.isfile(model_path_YOLO):

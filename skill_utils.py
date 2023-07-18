@@ -315,19 +315,19 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 		time.sleep(0.5)
 
-		# # Executing cutting action
-		# print("\nCutting...")
-		# self.fa.goto_gripper(0, block=False)
-		# # cut action
-		# # TODO: specify max height with object height
-		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.065, forces=[0.,0.,-75.])
-		# # self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
-		# time.sleep(1)
+		# Executing cutting action
+		print("\nCutting...")
+		self.fa.goto_gripper(0, block=False)
+		# cut action
+		# TODO: specify max height with object height
+		self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.065, forces=[0.,0.,-75.])
+		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
+		time.sleep(1)
 
-		# # TODO: potentailly add a pose check and if the gripper isn't at the cutting board height, re-try??? or return count unchanged???
-		# count[obj_class] += 1
-		# # rotate blade back to original rotation
-		# pose.rotation = self.og_rotation
+		# TODO: potentailly add a pose check and if the gripper isn't at the cutting board height, re-try??? or return count unchanged???
+		count[obj_class] += 1
+		# rotate blade back to original rotation
+		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
 		return count
 
