@@ -782,7 +782,15 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	# cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
 	# cv2.destroyWindow("Cropped Image")
 	
-	cropped_mask = mask_generator.generate(cropped_image)
+	# increase brightness
+	brightness_offset = 0.2 # increase brightness by 20%
+	bright_image = cv2.add(cropped_image, np.array([brightness_offset]))
+
+	# scale values back to the range of 0-255 and convert back to uint8
+	bright_image = np.clip(bright_image, 0, 1)
+	bright_image = (255*bright_image).astype(np.uint8)
+
+	cropped_mask = mask_generator.generate(bright_image)
 
 		
 	# cv2.destroyWindow("Cropped Image")
