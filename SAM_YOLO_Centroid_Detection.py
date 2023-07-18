@@ -127,12 +127,10 @@ def get_blade_bb(c_x, c_y, rot_angle):
 	maxy = c_y + y_dist 
 	return [[minx, miny], [maxx, maxy]]
 
-def check_collision(bbox, c_x, c_y, rot_angle):
+def check_collision(bbox, blade_bb):
 	"""
 	Check if the line is in collision with the bounding box, return True/False.
 	"""
-	blade_bb = get_blade_bb(c_x, c_y, rot_angle)
-
 	if blade_bb[0][0] > bbox[1][0]:
 		return False
 	elif blade_bb[1][0] < bbox[0][0]:
@@ -145,8 +143,6 @@ def check_collision(bbox, c_x, c_y, rot_angle):
 		return True
 	
 	
-
-
 		# slope_1 = (centroid[1] - p1[1]) / (centroid[0] - p1[0])
 		# for j in range(len(contour)):
 		# 	p2 = contour[j]
@@ -558,14 +554,17 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 			cent_x = cent_list_per_item[i][j][0]
 			cent_y = cent_list_per_item[i][j][1]
 			angle = cent_list_per_item[i][j][7]
+			blade_bbox = get_blade_bb(cent_x, cent_y, angle)
 			collisions = []
+
+			# TODO: add blade_bbox to frame copy
 
 			for k in range(len(box_coord)):
 				for l in range(len(box_coord[k])):
 					if k != i or l != j:
 						obj_bbox = [[cent_list_per_item[k][l][3], cent_list_per_item[k][l][4]], [cent_list_per_item[k][l][5], cent_list_per_item[k][l][6]]]
 						# check if bboxes intersect
-						if check_collision(obj_bbox, cent_x, cent_y, angle):
+						if check_collision(obj_bbox, blade_bbox):
 							print("\n====== Collision Detected ========")
 							# get vector from centroid to collision centroid
 							col_x = cent_list_per_item[k][l][0]
@@ -583,6 +582,12 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 
 							# append this point and angle to collisions list
 							collisions.append([push_x, push_y, push_angle])
+
+							# TODO: add collision object bbox to frame copy
+			
+			# TODO: visualize frame copy and wait for key enter to continue
+
+
 			# append collisions to cent_list[i] 
 			cent_list_per_item[i][j].append(collisions)
 

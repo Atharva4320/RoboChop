@@ -22,20 +22,18 @@ batch_size = 512
 img_height = 100
 img_width = 100
 n_channels = 3
-pre_train = False
-pre_train_path = 'best_loss_model.pth'
-save_path = 'custom_nopretrain.pth'
+pre_train = True
+pre_train_path = 'general_fruits360.pth'
+save_path = 'customdata_pretrain.pth'
 device = torch.device('cuda')
 
 # ------- import and process data -------
 if pre_train:
-    train_dir = "/home/alison/Desktop/ClassificationCutFruit/Training"
-    test_dir = "/home/alison/Desktop/ClassificationCutFruit/Test"
+    train_dir = "/home/alison/Desktop/ClassificationCutFruit/All_Classes/Training"
+    test_dir = "/home/alison/Desktop/ClassificationCutFruit/All_Classes/Test"
 else:
-    train_dir = "/home/alison/Desktop/ClassificationCutFruit/Training"
-    test_dir = "/home/alison/Desktop/ClassificationCutFruit/Test"
-    # train_dir = "/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/General_Classes/Training"
-    # test_dir = "/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/General_Classes/Test"
+    train_dir = "/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/General_Classes/Training"
+    test_dir = "/home/alison/Desktop/Fruit360/fruits-360_dataset/fruits-360/General_Classes/Test"
     
 
 transform_data = transforms.Compose([transforms.ToTensor(),

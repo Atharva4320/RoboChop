@@ -65,8 +65,8 @@ class Fruits_CNN(nn.Module):
         self.linear2 = nn.Linear(512, num_classes)
 
     def forward(self, x):
-        print("\nTensor: ", torch.is_tensor(x))
-        print("Tensor shape: ", x.size())
+        # print("\nTensor: ", torch.is_tensor(x))
+        # print("Tensor shape: ", x.size())
         out = self.conv1(x)
         out = self.batchnorm1(out)
         out = self.relu(out)
