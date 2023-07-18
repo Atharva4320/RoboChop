@@ -35,7 +35,7 @@ print("CV2 version: ", cv2.__version__)
  
 
 #TODO: VISION LOOP
-def vision_loop(img_queue, verts_queue, mask_queue, udp):
+def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp):
 	W = 848
 	H = 480
 
@@ -130,6 +130,10 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 			print("img_queue: ", img_queue)
 			verts_queue.put(verts)
 		
+		if not yolo_viz_queue.empty():
+			yolo_img = yolo_viz_queue.get()
+			cv2.imshow("YOLO Visual", yolo_img)
+
 		if not mask_queue.empty():
 			mask = mask_queue.get()
 			# display mask on color_image_1 as well as separate cv2.imshow window
@@ -150,7 +154,7 @@ def vision_loop(img_queue, verts_queue, mask_queue, udp):
 			 
 
 #TODO: SAM LOOP
-def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
+def SAM_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, udp, YOLO, SAM):
 	 
 	 while True:
 			if not img_queue.empty():
@@ -162,16 +166,19 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 				print("Saving the original image....")
 				cv2.imwrite('original_frame.jpg', color_image_1)
 
-				color_image_1[:, 0:75] = (0,0,0)
+				color_image_1[:, 0:175] = (0,0,0)  # Inserting Black bar starting from left -> 175 pixels (img coord)
 				img_shape = color_image_1.shape
 				color_image_1[:, img_shape[1]-85:-1] = (0,0,0)
+				color_image_1[0:145, :] = (0,0,0)
 
-				result_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
+				result_frame, yolo_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
 				# print("SAM")
 
-				# frame, _ = calculate_centroid(color_image_1, YOLO, SAM, poi='', yolo_centroid=True,yolo_all=True)
-
-				# cv2.imshow("SAM Visualization", result_frame)
+				# plt.imshow(cv2.cvtColor(yolo_frame, cv2.COLOR_BGR2RGB))
+				# plt.axis('off')
+				# plt.show()
+				# if cv2.waitKey(1) & 0xFF == ord('q'):
+				# 	cv2.destroyWindow('SAM Visualization')
 				# while True:
 				# 	if cv2.waitKey(1) & 0xFF == ord('q'):
 				# 		cv2.destroyWindow('SAM Visualization')
@@ -328,10 +335,10 @@ def SAM_loop(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM):
 				# print("Centroid list: ", centroid_list)
 				udp.SendData(str(message))  # Send the message
 				mask_queue.put(result_frame)
+				yolo_viz_queue.put(yolo_frame)
 
 
 if __name__ == '__main__':
-	img_queue = queue.Queue()
 
 	message = []
 	centroid_list = []
@@ -387,9 +394,10 @@ if __name__ == '__main__':
 	img_queue = queue.Queue()
 	verts_queue = queue.Queue()
 	mask_queue = queue.Queue()
+	yolo_viz_queue = queue.Queue()
 
-	vision = threading.Thread(target=vision_loop, args=(img_queue, verts_queue, mask_queue,  udp))
-	mask_sam = threading.Thread(target=SAM_loop, args=(img_queue, verts_queue, mask_queue, target_list, udp, YOLO, SAM))
+	vision = threading.Thread(target=vision_loop, args=(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp))
+	mask_sam = threading.Thread(target=SAM_loop, args=(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, udp, YOLO, SAM))
 
 	vision.start()
 	mask_sam.start()

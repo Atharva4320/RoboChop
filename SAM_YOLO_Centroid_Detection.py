@@ -503,7 +503,7 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 			bbox_target_list.append([])
 	# print("In detect_objects() function:")
 	# print("Returned bounding boxes: ", bbox_target_list)
-	return image, bbox_target_list
+	return image, result.plot(), bbox_target_list
 
    
 
@@ -546,12 +546,14 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 	"""
 	centroid_x, centroid_y = 0, 0
 
+
+
 	if yolo_all or poi == '':  # If you want to detect all objects within the frame
 		result_frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
 		return result_frame, []
 	else:
 		# print("Classes to detect: ", len(poi))
-		result_frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
+		result_frame, yolo_img, box_coord = detect_objects(frame, yolo_model, target_class=poi)
 	
 	# print("\nBBOX COORDINATES: ", box_coord)
 
@@ -639,7 +641,7 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 
 		print("\n\nCent List: ", cent_list_per_item)
 
-		return result_frame, cent_list_per_item if return_frame else cent_list_per_item
+		return result_frame, yolo_img, cent_list_per_item if return_frame else cent_list_per_item
 
 
 
@@ -779,7 +781,7 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	# cv2.imshow("Cropped Image", cropped_image)
 	# cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
 	# cv2.destroyWindow("Cropped Image")
-
+	
 	cropped_mask = mask_generator.generate(cropped_image)
 
 		
