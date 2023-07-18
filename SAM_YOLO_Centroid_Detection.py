@@ -783,14 +783,15 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	# cv2.destroyWindow("Cropped Image")
 	
 	# increase brightness
-	brightness_offset = 0.2 # increase brightness by 20%
-	bright_image = cv2.add(cropped_image, np.array([brightness_offset]))
+	# brightness_offset = 0.1 # increase brightness by 10%
+	# bright_image = cv2.add(cropped_image, np.array([brightness_offset]))
 
-	# scale values back to the range of 0-255 and convert back to uint8
-	bright_image = np.clip(bright_image, 0, 1)
-	bright_image = (255*bright_image).astype(np.uint8)
+	# # scale values back to the range of 0-255 and convert back to uint8
+	# bright_image = np.clip(bright_image, 0, 1)
+	# bright_image = (255*bright_image).astype(np.uint8)
+	# bright_image = cv2.convertScaleAbs(cropped_image, 1.5, 10)
 
-	cropped_mask = mask_generator.generate(bright_image)
+	cropped_mask = mask_generator.generate(cropped_image)
 
 		
 	# cv2.destroyWindow("Cropped Image")
@@ -816,9 +817,12 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	if display_mask and mask_area != 0:
 		print("Saving the cropped image...")
 		filename_cropped = f'cropped_image_{counter}.jpg'
+		# filename_bright = f'bright_image_{counter}.jpg' #TODO: DELETE LATER
 		current_dir = os.getcwd()
 		image_path_cropped = os.path.join(current_dir, "Experiment Images", filename_cropped)
+		# image_path_bright = os.path.join(current_dir, "Experiment Images", filename_bright)  #TODO: DELETE LATER
 		cv2.imwrite(image_path_cropped, cropped_image)
+		# cv2.imwrite(image_path_bright, bright_image)  #TODO: DELETE LATER
 		print("Cropped image saved at: ", image_path_cropped)
 		print("Saving the segmented cropped image...")
 		filename_cropped_seg = f'cropped_seg_image_{counter}.jpg'
