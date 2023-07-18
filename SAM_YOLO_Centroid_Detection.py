@@ -782,7 +782,10 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	# frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, (255, 0, 0))
 	# frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, (255, 0, 0))
 
-	draw_longest_line(frame, point1, point2, angle, (255, 0, 0))
+	frame_copy = frame.copy()
+	draw_longest_line(frame_copy, point1, point2, angle, (255, 0, 0))
+	cv2.imshow('Cut Plan', frame_copy)
+	# TODO: waitkey for keypress???
 	
 	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2, angle
 
