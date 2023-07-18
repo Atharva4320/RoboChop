@@ -824,7 +824,7 @@ def draw_cross_centroid(frame, centX, centY, color):
 def draw_longest_line(frame, pt1, pt2, angle, color):
 	font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2
 	cv2.line(frame, (pt1[0], pt1[1]), (pt2[0], pt2[1]), color, thickness)
-	coordinates_text = f"({angle})"
+	coordinates_text = f"({int(angle)})"
 	cv2.putText(frame, coordinates_text, (pt1[0] - 50, pt1[1] - 10), font, size, color, thickness)
 	return frame
 
