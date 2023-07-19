@@ -18,7 +18,7 @@ import threading
 print("Np version: ", np.__version__)
 print("CV2 version: ", cv2.__version__)
 
-
+counter = 0
 # dictionary of camera serials
 # 1: '220222066259',
 # 2: '151322066099',
@@ -35,10 +35,11 @@ print("CV2 version: ", cv2.__version__)
  
 
 #TODO: VISION LOOP
-def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp):
+def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, plan_queue, collision_queue, udp):
 	W = 848
 	H = 480
 
+	global counter
 	# Camera 1: 
 	serial_number_1 = '220222066259'
 	pipeline_1 = rs.pipeline()
@@ -84,11 +85,16 @@ def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp):
 	# start streaming
 	pipeline_3.start(config_3)
 
+	exp_num = 24
+	exp_str = 'Exp_' + str(exp_num)
+	directory_path = os.path.join('Videos/Experiment Videos', exp_str)
+	os.mkdir(directory_path)
+
 	# Define the codec and create a VideoWriter object
 	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	output_path_1 = os.path.join('Videos/Experiment Videos', 'cam_1_video_experiment_1.mp4')
-	output_path_3 = os.path.join('Videos/Experiment Videos', 'cam_3_video_experiment_1.mp4')
-	output_path_mask = os.path.join('Videos/Experiment Videos', 'mask_video_experiment_1.mp4')
+	output_path_1 = os.path.join( directory_path, 'cam_1_video_experiment_' + str(exp_num) + '.mp4')
+	output_path_3 = os.path.join(directory_path, 'cam_3_video_experiment_' + str(exp_num) + '.mp4')
+	output_path_mask = os.path.join(directory_path, 'mask_video_experiment_' + str(exp_num) + '.mp4')
 	out_1 = cv2.VideoWriter(output_path_1, fourcc, 30, (W, H))
 	out_3 = cv2.VideoWriter(output_path_3, fourcc, 30, (W, H))
 	mask_out = cv2.VideoWriter(output_path_mask, fourcc, 1, (W, H))
@@ -133,14 +139,36 @@ def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp):
 		if not yolo_viz_queue.empty():
 			yolo_img = yolo_viz_queue.get()
 			cv2.imshow("YOLO Visual", yolo_img)
+			cv2.imwrite(os.path.join(directory_path, "Yolo_visual_" + str(counter) + ".jpg"), yolo_img)
 
 		if not mask_queue.empty():
 			mask = mask_queue.get()
 			# display mask on color_image_1 as well as separate cv2.imshow window
 			cv2.imshow("Mask Image", mask)
+			cv2.imwrite(os.path.join(directory_path, "Mask_Image_" + str(counter) + ".jpg"), mask)
 			mask_out.write(mask)
 		else:
 			out_1.write(color_image_1)
+
+		if not plan_queue.empty():
+			plan = plan_queue.get()
+			cv2.imshow("Planned Cuts", plan)
+			cv2.imwrite(os.path.join(directory_path, "Planned_Cut_" + str(counter) + ".jpg"), plan)
+		
+		if not collision_queue.empty():
+			col_list = collision_queue.get()
+			print("\nCollision List Length: ", len(col_list))
+			for i in range(len(col_list)):
+				window_name = "Collision Detection " + str(i)
+				cv2.imshow(window_name, col_list[i])
+				cv2.imwrite(os.path.join(directory_path, window_name + "_" + str(counter) + ".jpg"), col_list[i])
+
+		# while True:
+		# 	if cv2.waitKey(1) & 0xFF == ord('e') or cv2.waitKey(1) == 27:
+		# 		cv2.destroyAllWindows()
+		# 		break
+
+		counter += 1
 
 		# Press 'q' or 'esc' to break the loop
 		if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) == 27:
@@ -154,7 +182,7 @@ def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp):
 			 
 
 #TODO: SAM LOOP
-def SAM_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, udp, YOLO, SAM):
+def SAM_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, plan_queue, collision_queue, target_list, udp, YOLO, SAM):
 	 
 	 while True:
 			if not img_queue.empty():
@@ -171,7 +199,7 @@ def SAM_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, ud
 				color_image_1[:, img_shape[1]-85:-1] = (0,0,0)
 				color_image_1[0:145, :] = (0,0,0)
 
-				result_frame, yolo_frame, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
+				result_frame, yolo_frame, plan_frame, collision_frames_list, centroid_list = calculate_centroid(color_image_1, YOLO, SAM, poi=target_list, sam_centroid=True,display_mask=True)
 				# print("SAM")
 
 				# plt.imshow(cv2.cvtColor(yolo_frame, cv2.COLOR_BGR2RGB))
@@ -292,7 +320,7 @@ def SAM_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, ud
 							
 							# print("Points to append: ", median_point)
 
-							median_point_rounded = np.round(median_point, 4)
+							median_point_rounded = np.round(median_point, 2)
 							coord_list.append(median_point_rounded.tolist())
 							prev_loc = coord_list
 					# print("Coord List: ", coord_list)
@@ -336,6 +364,8 @@ def SAM_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, ud
 				udp.SendData(str(message))  # Send the message
 				mask_queue.put(result_frame)
 				yolo_viz_queue.put(yolo_frame)
+				plan_queue.put(plan_frame)
+				collision_queue.put(collision_frames_list)
 
 
 if __name__ == '__main__':
@@ -371,7 +401,7 @@ if __name__ == '__main__':
 		warnings.warn("The file does not exits.")
 	
 	#============= Loading the YOLO Model =======================
-	model_path_YOLO = os.path.join('Models', 'best_13.pt') 
+	model_path_YOLO = os.path.join('Models', 'best_14.pt') 
 	print(model_path_YOLO)
 
 	if os.path.isfile(model_path_YOLO):
@@ -395,9 +425,11 @@ if __name__ == '__main__':
 	verts_queue = queue.Queue()
 	mask_queue = queue.Queue()
 	yolo_viz_queue = queue.Queue()
+	plan_queue = queue.Queue()
+	collision_queue = queue.Queue()
 
-	vision = threading.Thread(target=vision_loop, args=(img_queue, verts_queue, mask_queue, yolo_viz_queue, udp))
-	mask_sam = threading.Thread(target=SAM_loop, args=(img_queue, verts_queue, mask_queue, yolo_viz_queue, target_list, udp, YOLO, SAM))
+	vision = threading.Thread(target=vision_loop, args=(img_queue, verts_queue, mask_queue, yolo_viz_queue, plan_queue, collision_queue, udp))
+	mask_sam = threading.Thread(target=SAM_loop, args=(img_queue, verts_queue, mask_queue, yolo_viz_queue, plan_queue, collision_queue, target_list, udp, YOLO, SAM))
 
 	vision.start()
 	mask_sam.start()
