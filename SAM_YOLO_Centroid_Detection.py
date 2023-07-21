@@ -110,6 +110,8 @@ def get_rotation_angle(point1, point2, EVEN=False):
 	dir_vec = np.array([point2[0] - point1[0], point2[1] - point1[1]])
 	dir_vec = dir_vec / np.linalg.norm(dir_vec)
 	angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0)))
+	if math.isnan(angle):
+		angle = 0
 	if EVEN:
 		angle+=90
 	return angle
@@ -119,8 +121,10 @@ def get_blade_bb(c_x, c_y, rot_angle):
 	Calculate the pixel bounds of the projected blade in the scene
 	"""
 	half_lenth = 120 # NOTE: this is in pixels and needs to be tuned
-	x_dist = half_lenth * np.cos(math.radians(rot_angle))
-	y_dist = half_lenth * np.sin(math.radians(rot_angle))
+	x_dist = abs(half_lenth * np.cos(math.radians(rot_angle)))
+	y_dist = abs(half_lenth * np.sin(math.radians(rot_angle)))
+	print("\n\nx_dist: ", x_dist)
+	print("\n\ny_dist: ", y_dist)
 	minx = c_x - x_dist
 	maxx = c_x + x_dist
 	miny = c_y - y_dist
@@ -131,13 +135,22 @@ def check_collision(bbox, blade_bb):
 	"""
 	Check if the line is in collision with the bounding box, return True/False.
 	"""
+	print("bb col check")
 	if blade_bb[0][0] > bbox[1][0]:
+		print(blade_bb[0][0])
+		print(">",  bbox[1][0])
 		return False
 	elif blade_bb[1][0] < bbox[0][0]:
+		print("\n ", blade_bb[1][0])
+		print("<",  bbox[0][0])
 		return False
 	elif blade_bb[0][1] > bbox[1][1]:
+		print("\n ", blade_bb[0][1]) 
+		print(">",  bbox[1][1])
 		return False
 	elif blade_bb[1][1] < bbox[0][1]:
+		print("\n ", blade_bb[1][1])
+		print("<",  bbox[0][1])
 		return False
 	else:
 		return True
@@ -197,7 +210,7 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 
 	global image_counter
 	# saved_segmentations = []
-	# poi_mask = []
+	# poi_mask = 
 	# poi_area = 0 
 	updated_masks_seg = []
 	updated_masks_area = []
@@ -227,41 +240,54 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 		print("Saving the mask image...")
 		filename_masked = f'masked_image_{image_counter}.jpg'
 		current_dir = os.getcwd()
-		image_path_masked = os.path.join(current_dir, filename_masked)
+		image_path_masked = os.path.join(current_dir, "Experiment Images", filename_masked)
 		cv2.imwrite(image_path_masked, inverted_mask)
 		print("Masked image saved at: ", image_path_masked)
 
 		print("Saving the merged image...")
 		filename_merged= f'merged_image_{image_counter}.jpg'
 		current_dir = os.getcwd()
-		image_path_merged = os.path.join(current_dir, filename_merged)
+		image_path_merged = os.path.join(current_dir, "Experiment Images", filename_merged)
 		cv2.imwrite(image_path_merged, padded_image)
 		print("Merged image saved at: ", image_path_merged)
 		image_counter += 1
 		
 		#Run the classifier to classify the padded image -> returns label name ('string')
 		#---------------------------------------------------------------------------------
-		label_dict = {0: 'Apple',
-              1: 'Carrot',
-              2: 'Cucumber',
-              3: 'Lime',
-              4: 'Orange',
-              5: 'Pineapple'}
-		img_height = 100
-		img_width = 100
-		transform_data = transforms.Compose([transforms.ToTensor(),
-                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                     transforms.Resize((img_height, img_width), antialias=True)])
-		images = transform_data(padded_image)
-		images = torch.unsqueeze(images, dim=0)
-		images = images.cuda()
-		images = images.float()
-		print("\nimages shape: ", images.size())
-		classifier_result = classifier(images)
-		_, class_predicted = torch.max(classifier_result, 1)
-		class_predicted = class_predicted.cpu().detach().numpy()[0]
-		string_pred = label_dict[class_predicted]
-		print("Classifier prediction: ", string_pred)
+		# label_dict = {0: 'Apple',
+		# 	  1: 'Carrot',
+		# 	  2: 'Cucumber',
+		# 	  3: 'Lime',
+		# 	  4: 'Orange',
+		# 	  5: 'Pineapple'}
+		# img_height = 100
+		# img_width = 100
+		# transform_data = transforms.Compose([transforms.ToTensor(),
+		# 							 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+		# 							 transforms.Resize((img_height, img_width), antialias=True)])
+		# images = transform_data(padded_image)
+		# images = torch.unsqueeze(images, dim=0)
+		# images = images.cuda()
+		# images = images.float()
+		# print("\nimages shape: ", images.size())
+		# classifier_result = classifier(images)
+		# _, class_predicted = torch.max(classifier_result, 1)
+		# class_predicted = class_predicted.cpu().detach().numpy()[0]
+		# string_pred = label_dict[class_predicted]
+		# print("Classifier prediction: ", string_pred)
+
+		classifier_result = classifier(padded_image)
+		classifier_detect = classifier_result[0]
+		detect = classifier_detect.boxes.data.cpu().numpy()
+		class_detect = detect[:, 5]
+
+		classifier_names = np.array([classifier_detect.names[class_idx] for class_idx in class_detect])
+
+		print("Classifier name: ", classifier_names)
+		if len(classifier_names) != 0:
+			string_pred = classifier_names[0]
+		else:
+			string_pred = ""
 		#---------------------------------------------------------------------------------
 		
 		# cropped_name is the name of the label outputed by the classifer
@@ -271,7 +297,12 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 
 	if len(updated_masks_seg) == 0:
 		# False bounding box:
-		return image, 0, 0, 0, [0, 0], [0, 0]
+		poi = sorted(anns, key=lambda x: x['area'], reverse=True)
+		updated_masks_seg = [poi[0]['segmentation']]
+		updated_masks_area = [poi[0]['area']]
+		# print(updated_masks_seg)
+		# print(updated_masks_area)
+		# return image, 0, 0, 0, [0, 0], [0, 0], 0
 
 	elif len(updated_masks_seg) > 1:
 		# Combine all masks using logical OR operation
@@ -284,10 +315,13 @@ def generate_SAM_centroid(image, anns, classifier, target, random_color=False, d
 		# Replace the list with the total area
 		updated_masks_area = [total_area]
 
-	
 	# Compute the centroid of the mask that contains the target
 	poi_mask = updated_masks_seg[0]
 	poi_area = updated_masks_area[0]
+
+	# poi = sorted(anns, key=lambda x: x['area'], reverse=True)
+	# poi_mask = poi[0]['segmentation']
+	# poi_area = poi[0]['area']
 
 	cent_x, cent_y = get_centroid(poi_mask)
 	
@@ -382,13 +416,16 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 		img = result.plot()
 		return img, []
 
-	cv2.imshow('Detected Objects', result.plot())
+	# print("HERE!!!")
+	# plt.imshow(cv2.cvtColor(result.plot(), cv2.COLOR_BGR2RGB))
+	# plt.axis('off')
+	# plt.show()
+	# cv2.imshow('Detected Objects', result.plot())
 
-	# Wait for 'q' key to close the image
-	while True:
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			cv2.destroyWindow('Detected Objects')
-			break
+	# # Wait for 'q' key to close the image
+	# if cv2.waitKey(0) & 0xFF == ord('q'):
+	# 	cv2.destroyWindow('Detected Objects')
+
 	
 	# If detect_all flag is not set, proceed with finding the target_class
 	detections = results[0].boxes.data.cpu().numpy()
@@ -447,12 +484,13 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 
 	#TODO: Multiple target objects
 	bbox_target_list = []
+	print("Target Class: ", target_class)
 	for target_name in target_class:
 		indices = np.where(names == target_name)[0]  # Search for target object
 
 		# print("Indices: ", indices, target_class)
 		# print(len(indices))
-
+		print(indices, target_name)
 		# print("ALL")
 		# print("Boxes: ", boxes, type(boxes))
 		# print("Scores: ", scores, type(scores))
@@ -466,16 +504,19 @@ def detect_objects(image, model, target_class='', detect_all=False, print_class_
 			# print("Scores: ", scores[indices], type(scores))
 			# print("Classes: ", classes[indices], type(classes))
 			# print("Names: ", names[indices], type(names))
-
+			print(indices)
+			print(boxes[indices])
 			keep = nms(torch.from_numpy(boxes[indices]), torch.from_numpy(scores[indices]), iou_threshold=0.5)
-			bbox_target_list.append(boxes[keep.numpy()].astype(int).tolist())
+			print("Keep: ", keep)
+			print("Box to append: ", boxes[indices][keep.numpy()].astype(int).tolist())
+			bbox_target_list.append(boxes[indices][keep.numpy()].astype(int).tolist())
 			# print("Keep: ", keep.numpy())
 			# print("Boxes to keep:", boxes[keep.numpy()].astype(int).tolist())
 		else:
 			bbox_target_list.append([])
 	# print("In detect_objects() function:")
 	# print("Returned bounding boxes: ", bbox_target_list)
-	return image, bbox_target_list
+	return image, result.plot(), bbox_target_list
 
    
 
@@ -518,12 +559,14 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 	"""
 	centroid_x, centroid_y = 0, 0
 
+
+
 	if yolo_all or poi == '':  # If you want to detect all objects within the frame
 		result_frame = handle_yolo_all(frame, yolo_model, yolo_all, poi)
 		return result_frame, []
 	else:
 		# print("Classes to detect: ", len(poi))
-		result_frame, box_coord = detect_objects(frame, yolo_model, target_class=poi)
+		result_frame, yolo_img, box_coord = detect_objects(frame, yolo_model, target_class=poi)
 	
 	# print("\nBBOX COORDINATES: ", box_coord)
 
@@ -540,67 +583,93 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 			result_frame, centroid_x, centroid_y = calculate_yolo_centroid(frame, bc[0], bc[1], bc[2], bc[3])
 			cent_list.append([centroid_x, centroid_y])
 		return result_frame, cent_list if return_frame else cent_list
-			
+	
+		
 	elif sam_centroid:
+		print("Box coordinate: ", box_coord)
+		plan_frame = frame.copy()
 		for i in range(len(box_coord)):
 			cent_list = []
 			for bc in box_coord[i]:
-				result_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2, angle = calculate_sam_centroid(frame, yolo_model, sam_model, poi[i], bc[0], bc[1], bc[2], bc[3], display_mask)
+				result_frame, plan_frame, centroid_x, centroid_y, mask_area, lp_1, lp_2, angle = calculate_sam_centroid(frame, plan_frame, yolo_model, sam_model, poi[i], bc[0], bc[1], bc[2], bc[3], display_mask)
 				if not (centroid_x == 0 and centroid_y == 0 and mask_area == 0):  # If no false bounding box
 					# cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], lp_1, lp_2]) # TODO: OLDER VERSION
 					cent_list.append([centroid_x, centroid_y, mask_area, bc[0], bc[1], bc[2], bc[3], angle])
 			cent_list_per_item.append(cent_list)
-
 	
-	# ------- ADDED COLLISION DETECTION ---------
-	# iterate through bounding boxes and get idx i
-	for i in range(len(box_coord)):
-		for j in range(len(box_coord[i])):
-			# given centroid and angle generate blade bbox
-			print(cent_list_per_item[i][j])
-			cent_x = cent_list_per_item[i][j][0]
-			cent_y = cent_list_per_item[i][j][1]
-			angle = cent_list_per_item[i][j][7]
-			blade_bbox = get_blade_bb(cent_x, cent_y, angle)
-			collisions = []
+		# ------- ADDED COLLISION DETECTION ---------
+		# iterate through bounding boxes and get idx i
+		print("Checking for collisions...")
+		collision_frames_list = []
+		print("\nLen cent list: ", len(cent_list_per_item))
+		print("len cent list [0]: ", len(cent_list_per_item[0]))
+		print("Cent List: ", cent_list_per_item)
+		for i in range(len(cent_list_per_item)):
+			for j in range(len(cent_list_per_item[i])):
+				print("\ni: ", i)
+				print("j: ", j)
+				# given centroid and angle generate blade bbox
+				cent_x = cent_list_per_item[i][j][0]
+				cent_y = cent_list_per_item[i][j][1]
+				angle = cent_list_per_item[i][j][7]
+				blade_bbox = get_blade_bb(cent_x, cent_y, angle)
+				collisions = []
 
-			# TODO: add blade_bbox to frame copy
+				# TODO: add blade_bbox to frame copy
+				col_frame = frame.copy()
+				start_point = (int(blade_bbox[0][0]), int(blade_bbox[0][1]))
+				end_point = (int(blade_bbox[1][0]), int(blade_bbox[1][1]))
+				col_frame = cv2.rectangle(col_frame, start_point, end_point, color=(255, 0, 0), thickness=2)
 
-			for k in range(len(box_coord)):
-				for l in range(len(box_coord[k])):
-					if k != i or l != j:
-						obj_bbox = [[cent_list_per_item[k][l][3], cent_list_per_item[k][l][4]], [cent_list_per_item[k][l][5], cent_list_per_item[k][l][6]]]
-						# check if bboxes intersect
-						if check_collision(obj_bbox, blade_bbox):
-							print("\n====== Collision Detected ========")
-							# get vector from centroid to collision centroid
-							col_x = cent_list_per_item[k][l][0]
-							col_y = cent_list_per_item[k][l][1]
-							dir_vec = np.array([col_x - cent_x, col_y - cent_y])
-							dir_vec = dir_vec / np.linalg.norm(dir_vec)
+				for k in range(len(cent_list_per_item)):
+					for l in range(len(cent_list_per_item[k])):
+						if k != i or l != j:
+							obj_bbox = [[cent_list_per_item[k][l][3], cent_list_per_item[k][l][4]], [cent_list_per_item[k][l][5], cent_list_per_item[k][l][6]]]
+							# col_frame = cv2.rectangle(col_frame, (int(obj_bbox[0][0]), int(obj_bbox[0][1])), (int(obj_bbox[1][0]), int(obj_bbox[1][1])), (0, 0, 255), 2)
+							
+							# check if bboxes intersect
+							print("\nobj bbox: ", obj_bbox)
+							print("Blade bbox: ", blade_bbox)
+							if check_collision(obj_bbox, blade_bbox):
+								print("\n====== Collision Detected ========")
+								# get vector from centroid to collision centroid
+								col_x = cent_list_per_item[k][l][0]
+								col_y = cent_list_per_item[k][l][1]
+								dir_vec = np.array([col_x - cent_x, col_y - cent_y])
+								dir_vec = dir_vec / np.linalg.norm(dir_vec)
+								base_vec = np.array([1, 0])
 
-							# get angle of perpendicular vector
-							push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, dir_vec), -1.0, 1.0))) + 90
+								# get angle of perpendicular vector
+								print("Dot: ", np.dot(dir_vec, base_vec))
+								print("Clip: ", np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))
+								print("Arccos: ", np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0)))
+								push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))) # + 90
 
-							# TODO: get point on SAM mask closest to obj centroid
-							# get point on bbox that is closest to obj centroid
-							push_x = min(max(obj_bbox[0][0], cent_x), obj_bbox[1][0])
-							push_y = min(max(obj_bbox[0][1], cent_y), obj_bbox[1][1])
+								# push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, dir_vec), -1.0, 1.0))) + 90
+								# print("Other Angle: ", math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))) + 90)
+								# print("Push Angle: ", push_angle)
+								if math.isnan(push_angle):
+									push_angle = 0
+								# TODO: get point on SAM mask closest to obj centroid
+								# get point on bbox that is closest to obj centroid
+								push_x = min(max(obj_bbox[0][0], cent_x), obj_bbox[1][0])
+								push_y = min(max(obj_bbox[0][1], cent_y), obj_bbox[1][1])
 
-							# append this point and angle to collisions list
-							collisions.append([push_x, push_y, push_angle])
+								# append this point and angle to collisions list
+								collisions.append([push_x, push_y, push_angle])
 
-							# TODO: add collision object bbox to frame copy
-			
-			# TODO: visualize frame copy and wait for key enter to continue
+								# TODO: add collision object bbox to frame copy
+								col_frame = cv2.rectangle(col_frame, (int(obj_bbox[0][0]), int(obj_bbox[0][1])), (int(obj_bbox[1][0]), int(obj_bbox[1][1])), (0, 0, 255), 2)
+				
+				# TODO: visualize frame copy and wait for key enter to continue
+				collision_frames_list.append(col_frame)
 
-
-			# append collisions to cent_list[i] 
-			cent_list_per_item[i][j].append(collisions)
+				# append collisions to cent_list[i] 
+				cent_list_per_item[i][j].append(collisions)
 
 		print("\n\nCent List: ", cent_list_per_item)
 
-		return result_frame, cent_list_per_item if return_frame else cent_list_per_item
+		return result_frame, yolo_img, plan_frame, collision_frames_list, cent_list_per_item if return_frame else cent_list_per_item
 
 
 
@@ -695,7 +764,7 @@ def calculate_yolo_centroid(frame, x1, y1, x2, y2):
 
 
 
-def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, display_mask):
+def calculate_sam_centroid(frame, plan_frame, YOLO, mask_generator, target, x1, y1, x2, y2, display_mask):
 	"""
 	This function calculates the centroid using SAM 
 	and draws it on the given frame. It also has an option to display the generated mask.
@@ -731,12 +800,24 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	# This function calculates the centroid using sam method
 
 	global counter
+	sam_centX = 0
+	sam_centY = 0
+	mask_area = 0
 	# cv2.imshow("FRAME", frame)
 	cropped_image = frame[y1:y2, x1:x2]
 
 	# cv2.imshow("Cropped Image", cropped_image)
 	# cv2.waitKey(5000)  # Wait for 2000 ms (2 seconds) then close the window
 	# cv2.destroyWindow("Cropped Image")
+	
+	# increase brightness
+	# brightness_offset = 0.1 # increase brightness by 10%
+	# bright_image = cv2.add(cropped_image, np.array([brightness_offset]))
+
+	# # scale values back to the range of 0-255 and convert back to uint8
+	# bright_image = np.clip(bright_image, 0, 1)
+	# bright_image = (255*bright_image).astype(np.uint8)
+	# bright_image = cv2.convertScaleAbs(cropped_image, 1.5, 10)
 
 	cropped_mask = mask_generator.generate(cropped_image)
 
@@ -758,20 +839,23 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	'''
 	
 
-	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2, angle = generate_SAM_centroid(cropped_image, cropped_mask, classifier, target)
+	cropped_mask_img, cent_x, cent_y, mask_area, point1, point2, angle = generate_SAM_centroid(cropped_image, cropped_mask, YOLO, target)
 
 
 	if display_mask and mask_area != 0:
 		print("Saving the cropped image...")
 		filename_cropped = f'cropped_image_{counter}.jpg'
+		# filename_bright = f'bright_image_{counter}.jpg' #TODO: DELETE LATER
 		current_dir = os.getcwd()
-		image_path_cropped = os.path.join(current_dir, filename_cropped)
+		image_path_cropped = os.path.join(current_dir, "Experiment Images", filename_cropped)
+		# image_path_bright = os.path.join(current_dir, "Experiment Images", filename_bright)  #TODO: DELETE LATER
 		cv2.imwrite(image_path_cropped, cropped_image)
+		# cv2.imwrite(image_path_bright, bright_image)  #TODO: DELETE LATER
 		print("Cropped image saved at: ", image_path_cropped)
 		print("Saving the segmented cropped image...")
 		filename_cropped_seg = f'cropped_seg_image_{counter}.jpg'
 		current_dir = os.getcwd()
-		image_path_cropped_seg = os.path.join(current_dir, filename_cropped_seg)
+		image_path_cropped_seg = os.path.join(current_dir, "Experiment Images", filename_cropped_seg)
 		cv2.imwrite(image_path_cropped_seg, cv2.cvtColor(cropped_mask_img, cv2.COLOR_RGB2BGR))
 		print("Segmented Cropped image saved at: ", image_path_cropped_seg)
 		counter += 1
@@ -789,12 +873,11 @@ def calculate_sam_centroid(frame, YOLO, mask_generator, target, x1, y1, x2, y2, 
 	# frame = draw_circle_centroid(frame, point1[0], point1[1], mask_area, (255, 0, 0))
 	# frame = draw_circle_centroid(frame, point2[0], point2[1], mask_area, (255, 0, 0))
 
-	frame_copy = frame.copy()
-	draw_longest_line(frame_copy, point1, point2, angle, (255, 0, 0))
-	cv2.imshow('Cut Plan', frame_copy)
+	draw_longest_line(plan_frame, point1, point2, angle, (255, 0, 0))
+	# cv2.imshow('Cut Plan', frame_copy)
 	# TODO: waitkey for keypress???
 	
-	return frame, int(sam_centX), int(sam_centY), mask_area, point1, point2, angle
+	return frame, plan_frame, int(sam_centX), int(sam_centY), mask_area, point1, point2, angle
 
 
 

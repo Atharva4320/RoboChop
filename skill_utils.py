@@ -337,8 +337,10 @@ class SkillUtils():
 		self.fa.goto_gripper(0, block=False)
 		# cut action
 		# TODO: specify max height with object height
+		
 		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.075, forces=[0.,0.,-75.]) # 0.065
 		self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.08, forces=[0.,0.,-100.]) # 0.065
+
 		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
 		time.sleep(1)
 
