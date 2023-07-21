@@ -7,20 +7,11 @@ import time
 
 # --------- DEFINE TARGET PIECES HERE --------
 n_pieces = {
-	"Apple": 3
+	"Apple": 0,
+	"Cucumber": 0,
+	"Carrot": 2
 }
-EVEN = True # heuristic for slice type 
-
-"""
----------- CURRENT ISSUES -----------
-TODOs: Fix the following current bugs:
-
-	(1) even slice heuristic failing in some scenarios the rotation is generated in plan_cut_multiclass() function --> EVEN should 
-		result in gripper rotation perpendicular to longest line 
-
-	(2) object collision detection failing in check_cut_collisions_multiclass() function --> appears to get the exact same bounding
-		box for each different object in the scene???
-"""
+EVEN = False # heuristic for slice type 
 
 # updIP: This computer, SendIP: other computer 
 udp = U.UdpComms(udpIP='172.26.5.54', sendIP='172.26.69.200', portTX=5501, portRX=5500, enableRX=True)
@@ -75,7 +66,7 @@ for object in object_list:
 			wall_collision = skills.push_away_from_wall(com, angle)
 			while wall_collision:
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
-				com, angle = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
+				com, angle, cut_idx = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
 				wall_collision = skills.push_away_from_wall(com, angle)
 			# get collision check with other objects in scene
 			print("Dict: ", obj_dict[object][cut_idx])
@@ -85,6 +76,8 @@ for object in object_list:
 				print("collisions: ", collisions)
 				skills.push(com, collisions[0][0], collisions[0][1])
 				obs_objects, obj_dict = skills.observe_scene_multiclass(udp, reset_pose, classes)
+				com, angle, cut_idx = skills.plan_cut_multiclass(obj_dict, object, even_heuristic=EVEN) 
+				collisions = obj_dict[object][cut_idx][3]
 
 
 			# ======= OLD COLLISION DETECTION VERSION =======

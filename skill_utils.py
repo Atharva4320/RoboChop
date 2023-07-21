@@ -117,6 +117,16 @@ class SkillUtils():
 		self.fa.goto_pose(pose)
 		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
+
+	def _wrap_angle_to_0_90(self, angle):
+		"""
+		"""
+		wr = angle % 360
+		wr %= 180
+		if wr > 90:
+			wr = 180 - wr
+		return wr
+
 	
 	def observe_scene_multiclass(self, udp, obs_pose, classes):
 		"""
@@ -129,6 +139,7 @@ class SkillUtils():
 		"""
 		# goto observation pose
 		print("\nGo to observation pose...")
+		self.fa.goto_gripper(0, block=False)
 		self.fa.goto_pose(obs_pose)
 		time.sleep(0.5)
 		# send message
@@ -154,7 +165,9 @@ class SkillUtils():
 				y = element[1]
 				z = element[2]
 				area = element[3]
-				cut_angle = element[4]
+				cut_angle = self._wrap_angle_to_0_90(element[4])
+				print("\nUnwrapped angle: ", element[4])
+				print("Wrapped: ", cut_angle)
 				
 				self.robot_pose = self.fa.get_pose()
 				com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([x,y,z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
@@ -169,7 +182,9 @@ class SkillUtils():
 						push_x = element[j]
 						push_y = element[j+1]
 						push_z = element[j+2]
-						push_angle = element[j+3]
+						push_angle = self._wrap_angle_to_0_90(element[j+3])
+						print("\nUnwrapped angle: ", element[j+3])
+						print("Wrapped: ", push_angle)
 
 						push_com = get_object_center_point_in_world_realsense_3D_camera_point(np.array([push_x,push_y,push_z]), self.realsense_intrinsics, self.realsense_to_ee_transform, self.robot_pose)
 						push_com = np.array([push_com[0], push_com[1] + 0.065, push_com[2] + 0.02])
@@ -304,30 +319,33 @@ class SkillUtils():
 
 		return:		count:	Dictionary with keys of the object classes and values of the expected number of slices in the scene.
 		"""
+		self.fa.goto_gripper(0, block=False)
 		self.prev_cut_pos = com
 		pose = self.fa.get_pose()
 		rot = self._get_rot_matrix(self.og_rotation, angle) 
 		self.prev_cut_rot = rot
 		self.prev_cut_angle = angle
 		# goto com with offset
-		pose.translation = np.array([com[0], com[1], com[2] + 0.10])
+		pose.translation = np.array([com[0], com[1], com[2] + 0.10]) # 0.10
+		print("\nCut Pose: ", pose.translation)
 		pose.rotation = rot
 		self.fa.goto_pose(pose)
 		time.sleep(0.5)
 
-		# # Executing cutting action
-		# print("\nCutting...")
-		# self.fa.goto_gripper(0, block=False)
-		# # cut action
-		# # TODO: specify max height with object height
-		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.065, forces=[0.,0.,-75.])
-		# # self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
-		# time.sleep(1)
+		# Executing cutting action
+		print("\nCutting...")
+		self.fa.goto_gripper(0, block=False)
+		# cut action
+		# TODO: specify max height with object height
+		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.075, forces=[0.,0.,-75.]) # 0.065
+		self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.08, forces=[0.,0.,-100.]) # 0.065
+		# self.fa.apply_effector_forces_along_axis(1.0, 0.5, 0.055, forces=[0.,0.,-75.])
+		time.sleep(1)
 
-		# # TODO: potentailly add a pose check and if the gripper isn't at the cutting board height, re-try??? or return count unchanged???
-		# count[obj_class] += 1
-		# # rotate blade back to original rotation
-		# pose.rotation = self.og_rotation
+		# TODO: potentailly add a pose check and if the gripper isn't at the cutting board height, re-try??? or return count unchanged???
+		count[obj_class] += 1
+		# rotate blade back to original rotation
+		pose.rotation = self.og_rotation
 		self.fa.goto_pose(pose)
 		return count
 
@@ -361,6 +379,7 @@ class SkillUtils():
 
 		return:		Bool:	True if there was a predicted collision with the wall, and we moved an object in the scene, False if no action.
 		"""
+		self.fa.goto_gripper(0, block=False)
 		tool_dim = 0.18 # x,y in [m]
 		# NOTE: rotation expected in degrees
 		print("Rotation: ", rotation)
@@ -465,12 +484,16 @@ class SkillUtils():
 		"""
 		"""
 		dir_vector = (push_com[0:2] - cut_obj_com[0:2]) / np.linalg.norm(push_com[0:2] - cut_obj_com[0:2])
+		print("======== ENTERING PUSH ACTION =========")
 		print("dir vector: ", dir_vector)
 		pose = self.fa.get_pose()
+		# get perpendicular push angle
+		push_angle+=90
 		rot_matrix = self._get_rot_matrix(self.og_rotation, push_angle) 
 		# rotate blade for push angle
 		pose = self.fa.get_pose()
 		pose.rotation = rot_matrix
+		self.fa.goto_gripper(0, block=False)
 		self.fa.goto_pose(pose)
 		print("...rotating blade...")
 		# goto start position for push
@@ -479,11 +502,12 @@ class SkillUtils():
 		print("\npush pose: ", pose.translation)
 		self.fa.goto_pose(pose)
 		# goto final position for push
-		push_dist = 0.05 
+		push_dist = 0.055 
 		xy_push = push_dist * dir_vector
 		print("xy push: ", xy_push)
 		new_pose = pose.translation + np.array([xy_push[0], xy_push[1], 0])
 		pose.translation = new_pose
+		print("Final push pose: ", pose.translation)
 		self.fa.goto_pose(pose)
 		# goto intermediate z pose to then reset the gripper rotation
 		pose.translation = np.array([new_pose[0], new_pose[1], 0.25])
