@@ -7,11 +7,11 @@ import time
 
 # --------- DEFINE TARGET PIECES HERE --------
 n_pieces = {
-	"Apple": 0,
-	"Cucumber": 0,
-	"Carrot": 2
+	"Apple": 3,
+	"Cucumber": 1,
+	"Carrot": 0
 }
-EVEN = False # heuristic for slice type 
+EVEN = True # heuristic for slice type 
 
 # updIP: This computer, SendIP: other computer 
 udp = U.UdpComms(udpIP='172.26.5.54', sendIP='172.26.69.200', portTX=5501, portRX=5500, enableRX=True)

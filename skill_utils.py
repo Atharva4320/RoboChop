@@ -326,7 +326,7 @@ class SkillUtils():
 		self.prev_cut_rot = rot
 		self.prev_cut_angle = angle
 		# goto com with offset
-		pose.translation = np.array([com[0], com[1], com[2] + 0.10]) # 0.10
+		pose.translation = np.array([com[0], com[1], com[2] + 0.11]) # 0.10
 		print("\nCut Pose: ", pose.translation)
 		pose.rotation = rot
 		self.fa.goto_pose(pose)
