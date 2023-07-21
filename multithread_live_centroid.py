@@ -85,9 +85,9 @@ def vision_loop(img_queue, verts_queue, mask_queue, yolo_viz_queue, plan_queue, 
 	# start streaming
 	pipeline_3.start(config_3)
 
-	exp_num = 24
+	exp_num = 31
 	exp_str = 'Exp_' + str(exp_num)
-	directory_path = os.path.join('Videos/Experiment Videos', exp_str)
+	directory_path = os.path.join('Videos/Single_Cut_To_Failure', exp_str)
 	os.mkdir(directory_path)
 
 	# Define the codec and create a VideoWriter object
@@ -401,7 +401,7 @@ if __name__ == '__main__':
 		warnings.warn("The file does not exits.")
 	
 	#============= Loading the YOLO Model =======================
-	model_path_YOLO = os.path.join('Models', 'best_14.pt') 
+	model_path_YOLO = os.path.join('Models', 'best_15.pt') 
 	print(model_path_YOLO)
 
 	if os.path.isfile(model_path_YOLO):

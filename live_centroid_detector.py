@@ -120,7 +120,7 @@ if __name__ == '__main__':
         warnings.warn("The file does not exits.")
     
     #============= Loading the YOLO Model =======================
-    model_path_YOLO = os.path.join('Models', 'best_14.pt')
+    model_path_YOLO = os.path.join('Models', 'best_15.pt')
     print(model_path_YOLO)
 
     if os.path.isfile(model_path_YOLO):

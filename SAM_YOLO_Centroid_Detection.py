@@ -101,7 +101,7 @@ def find_longest_line(contour, centroid):
 
 	return [x1, y1], [x2, y2]
 
-def get_rotation_angle(point1, point2, EVEN=True):
+def get_rotation_angle(point1, point2, EVEN=False):
 	"""
 	Return the angle to rotate the gripper to be at given the two points indicating the longest
 	line and the cut heuristic (even --> perpendicular, odd --> parallel).
@@ -643,10 +643,11 @@ def calculate_centroid(frame, yolo_model, sam_model, poi='', yolo_centroid=False
 								print("Dot: ", np.dot(dir_vec, base_vec))
 								print("Clip: ", np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))
 								print("Arccos: ", np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0)))
-								# push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))) + 90
-								push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, dir_vec), -1.0, 1.0))) + 90
-								print("Other Angle: ", math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))) + 90)
-								print("Push Angle: ", push_angle)
+								push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))) # + 90
+
+								# push_angle = math.degrees(np.arccos(np.clip(np.dot(dir_vec, dir_vec), -1.0, 1.0))) + 90
+								# print("Other Angle: ", math.degrees(np.arccos(np.clip(np.dot(dir_vec, base_vec), -1.0, 1.0))) + 90)
+								# print("Push Angle: ", push_angle)
 								if math.isnan(push_angle):
 									push_angle = 0
 								# TODO: get point on SAM mask closest to obj centroid
